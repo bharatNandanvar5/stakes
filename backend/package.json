@@ -5,7 +5,8 @@
   "scripts": {
     "start": "nest start --watch",
     "start:dev": "nest start --watch",
-    "build": "nest build"
+    "start:prod": "node dist/main.js",
+    "build": "npx nest build"
   },
   "keywords": [],
   "author": "",
