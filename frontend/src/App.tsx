@@ -32,7 +32,7 @@ const PrivateRoute: React.FC<{
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
 
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) return <Navigate to="/" replace />;
   if (adminOnly && user?.role !== "admin") return <Navigate to="/" replace />;
 
   return <>{children}</>;
@@ -47,7 +47,7 @@ function App() {
       <SocketProvider>
         <div className="min-h-screen bg-dark text-white font-sans selection:bg-primary/30">
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
               path="/admin"
