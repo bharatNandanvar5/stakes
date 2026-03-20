@@ -1,16 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext";
+import { useAuthStore } from "../store/useAuthStore";
 import { motion } from "framer-motion";
-import { Play, LogIn, Swords, Bomb, Users } from "lucide-react";
+import { Play, LogIn, Swords, Bomb, Users, LogOut, Settings, LayoutDashboard } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Lobby: React.FC = () => {
-  const [name, setName] = useState("");
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const [name, setName] = useState(user?.username || "");
   const [roomCode, setRoomCode] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState(2);
+  const [bombCount, setBombCount] = useState(5);
+  const [showSettings, setShowSettings] = useState(false);
+  
   const { createRoom, joinRoom } = useSocket();
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) createRoom(name.trim());
+    if (name.trim()) {
+      createRoom(name.trim(), { maxPlayers, bombCount });
+    }
   };
 
   const handleJoin = (e: React.FormEvent) => {
@@ -20,9 +30,27 @@ const Lobby: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent-bomb/5 rounded-full blur-[120px]" />
+      {/* Navbar-like top bar */}
+      <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20">
+        <div className="flex items-center gap-4">
+          <div className="glass px-4 py-2 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Users className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-black text-sm uppercase tracking-widest">{user?.username}</span>
+          </div>
+          {user?.role === 'admin' && (
+            <Link to="/admin" className="glass px-4 py-2 rounded-xl flex items-center gap-3 hover:bg-white/10 transition-colors">
+              <LayoutDashboard className="w-4 h-4 text-primary" />
+              <span className="font-black text-sm uppercase tracking-widest text-primary">ADMIN</span>
+            </Link>
+          )}
+        </div>
+        <button onClick={logout} className="glass px-4 py-2 rounded-xl flex items-center gap-3 hover:bg-accent-bomb/10 transition-colors group">
+          <LogOut className="w-4 h-4 text-gray-500 group-hover:text-accent-bomb transition-colors" />
+          <span className="font-black text-sm uppercase tracking-widest text-gray-500 group-hover:text-accent-bomb">LOGOUT</span>
+        </button>
+      </div>
 
       <motion.div
         initial={{ y: -20, opacity: 0 }}
@@ -40,14 +68,14 @@ const Lobby: React.FC = () => {
           <h1 className="text-6xl font-black italic tracking-tighter uppercase text-white">
             STAKE<span className="text-primary italic">MINES</span>
           </h1>
-          <p className="text-gray-500 font-bold tracking-[0.3em] text-xs mt-2 uppercase">
+          <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] mt-2 uppercase">
             Provably Fair Multiplayer
           </p>
         </div>
 
         <div className="glass p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
+          
           <div className="space-y-6">
             <div className="relative group">
               <input
@@ -57,10 +85,55 @@ const Lobby: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-dark-lighter/50 border-2 border-white/5 focus:border-primary/50 p-5 rounded-2xl transition-all text-xl font-bold placeholder:text-gray-600 outline-none"
               />
-              <div className="absolute inset-0 rounded-2xl bg-primary/5 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
             </div>
 
             <div className="grid gap-4">
+              <div className="space-y-4">
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="w-full glass py-3 px-6 rounded-2xl flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings className={`w-4 h-4 ${showSettings ? 'animate-spin' : ''}`} />
+                    GAME SETTINGS
+                  </div>
+                  <span className="text-[10px] bg-white/5 px-2 py-1 rounded">
+                    {maxPlayers}P | {bombCount} BOMBS
+                  </span>
+                </button>
+
+                {showSettings && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    className="space-y-4 glass p-4 rounded-2xl border-white/5 overflow-hidden"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                        <span>MAX PLAYERS</span>
+                        <span className="text-primary">{maxPlayers}</span>
+                      </div>
+                      <input 
+                        type="range" min="2" max="5" value={maxPlayers} 
+                        onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
+                        className="w-full accent-primary bg-dark-lighter rounded-lg h-2"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                        <span>BOMB COUNT</span>
+                        <span className="text-accent-bomb">{bombCount}</span>
+                      </div>
+                      <input 
+                        type="range" min="1" max="20" value={bombCount} 
+                        onChange={(e) => setBombCount(parseInt(e.target.value))}
+                        className="w-full accent-accent-bomb bg-dark-lighter rounded-lg h-2"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
               <button
                 onClick={handleCreate}
                 disabled={!name.trim()}
@@ -68,14 +141,11 @@ const Lobby: React.FC = () => {
               >
                 <Play className="w-6 h-6 fill-dark" />
                 <span className="text-xl">CREATE BATTLE</span>
-                <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/20 opacity-40 group-hover:animate-shine" />
               </button>
 
               <div className="flex items-center gap-4 py-2">
                 <div className="h-[1px] flex-1 bg-white/5" />
-                <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">
-                  OR JOIN CHALLENGE
-                </span>
+                <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">OR JOIN CHALLENGE</span>
                 <div className="h-[1px] flex-1 bg-white/5" />
               </div>
 
@@ -96,26 +166,6 @@ const Lobby: React.FC = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="mt-12 flex items-center justify-center gap-6">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
-              <Swords className="w-5 h-5 text-gray-400" />
-            </div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-              BATTLES
-            </span>
-          </div>
-          <div className="w-[1px] h-8 bg-white/5" />
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
-              <Users className="w-5 h-5 text-gray-400" />
-            </div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-              REALTIME
-            </span>
           </div>
         </div>
       </motion.div>

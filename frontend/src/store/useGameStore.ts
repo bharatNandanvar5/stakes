@@ -42,7 +42,10 @@ export const useGameStore = create<GameStore>((set) => ({
   playerName: '',
   playerId: null,
 
-  setGameState: (state) => set((prev) => ({ ...prev, ...state })),
+  setGameState: (state) => set((prev) => {
+    console.log('Zustand setting state:', state);
+    return { ...prev, ...state };
+  }),
   resetGame: () => set({
     grid: new Array(25).fill(null),
     revealed: new Array(25).fill(false),

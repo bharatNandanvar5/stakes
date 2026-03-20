@@ -10,6 +10,8 @@ import {
 import { Server, Socket } from 'socket.io';
 import { RoomService } from './room.service';
 import { GameService, GameState } from '../game/game.service';
+import { HistoryService } from '../history/history.service';
+import { UsersService } from '../users/users.service';
 
 @WebSocketGateway({
   cors: {
@@ -25,6 +27,8 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
+    private readonly historyService: HistoryService,
+    private readonly usersService: UsersService,
   ) { }
 
   handleConnection(client: Socket) {
@@ -35,28 +39,45 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`Client disconnected: ${client.id}`);
     const roomId = this.roomService.removePlayer(client.id);
     if (roomId) {
-      const room = this.roomService.getRoom(roomId);
+      const room = this.roomService.getRoomBySocketId(roomId);
       if (room) {
         this.server.to(roomId).emit('room_state', this.gameService.getClientState(room, ''));
       }
     }
   }
 
-  @SubscribeMessage('create_room')
-  handleCreateRoom(
-    @MessageBody() data: { playerName: string },
+  @SubscribeMessage('authenticate')
+  handleAuthenticate(
+    @MessageBody() data: { userId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const roomId = this.roomService.createRoom(data.playerName, client.id);
+    // In a real app, we would verify the JWT here. 
+    // For now, we'll trust the userId from the client to link the session.
+    (client as any).userId = data.userId;
+    console.log(`Socket ${client.id} authenticated as user ${data.userId}`);
+  }
+
+  @SubscribeMessage('create_room')
+  handleCreateRoom(
+    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number } },
+    @ConnectedSocket() client: Socket,
+  ) {
+    console.log('handleCreateRoom:', data);
+    const roomId = this.roomService.createRoom(data.playerName, client.id, data.settings);
     client.join(roomId);
-    const room: any = this.roomService.getRoom(roomId);
+    const room: any = this.roomService.getRoomBySocketId(client.id);
+    console.log('Room found for creator:', room?.roomId);
     if (room) {
       const player = room.players.find(p => p.socketId === client.id);
-      client.emit('room_created', {
+      if ((client as any).userId) player.userId = (client as any).userId;
+      
+      const response = {
         roomId,
         gameState: this.gameService.getClientState(room, client.id),
         playerId: player?.id
-      });
+      };
+      console.log('Emitting room_created:', response);
+      client.emit('room_created', response);
     }
   }
 
@@ -66,16 +87,21 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     try {
+      console.log('handleJoinRoom:', data);
       const roomId = data.roomId.toUpperCase();
       const gameState: any = this.roomService.joinRoom(roomId, data.playerName, client.id);
       client.join(roomId);
 
       const player = gameState.players.find(p => p.socketId === client.id);
-      client.emit('room_joined', {
-        roomId,
+      if ((client as any).userId) player.userId = (client as any).userId;
+      
+      const response = { 
+        roomId, 
         gameState: this.gameService.getClientState(gameState, ''),
-        playerId: player?.id
-      });
+        playerId: player?.id 
+      };
+      console.log('Emitting room_joined:', response);
+      client.emit('room_joined', response);
 
       // Broadcast room update to all players
       this.server.to(roomId).emit('player_joined', { roomId, gameState: this.gameService.getClientState(gameState, '') });
@@ -84,12 +110,13 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(roomId).emit('game_started', { gameState: this.gameService.getClientState(gameState, '') });
       }
     } catch (error) {
+      console.error('Join room error:', error.message);
       client.emit('error', { message: error.message });
     }
   }
 
   @SubscribeMessage('make_move')
-  handleMakeMove(
+  async handleMakeMove(
     @MessageBody() { tileIndex }: { tileIndex: number },
     @ConnectedSocket() client: Socket,
   ) {
@@ -110,8 +137,42 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         gameState,
         event: state.status === GameState.FINISHED ? 'game_over' : 'tile_revealed'
       });
+
+      if (state.status === GameState.FINISHED) {
+        await this.saveGameHistory(state);
+      }
     } catch (error) {
       client.emit('error', { message: error.message });
+    }
+  }
+
+  private async saveGameHistory(state: any) {
+    const playersWithUserId = state.players.filter(p => p.userId);
+    if (playersWithUserId.length === 0) return;
+
+    const historyData = {
+      roomId: state.roomId,
+      players: playersWithUserId.map(p => p.userId),
+      winnerId: state.players.find(p => p.id === state.winnerId)?.userId,
+      settings: state.settings,
+      results: state.players.map(p => ({
+        userId: p.userId,
+        score: p.score,
+        isWinner: p.id === state.winnerId
+      }))
+    };
+
+    await this.historyService.create(historyData);
+    
+    // Update user stats
+    for (const player of state.players) {
+      if (player.userId) {
+        await this.usersService.updateStats(
+          player.userId, 
+          player.id === state.winnerId, 
+          player.score
+        );
+      }
     }
   }
 
@@ -135,7 +196,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomId = this.roomService.removePlayer(client.id);
     if (roomId) {
       client.leave(roomId);
-      const room = this.roomService.getRoom(roomId);
+      const room = this.roomService.getRoomBySocketId(roomId);
       if (room) {
         this.server.to(roomId).emit('room_state', this.gameService.getClientState(room, ''));
       }

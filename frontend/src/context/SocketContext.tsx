@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useGameStore } from '../store/useGameStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface SocketContextType {
   socket: Socket | null;
-  createRoom: (playerName: string) => void;
+  createRoom: (playerName: string, settings?: { maxPlayers?: number, bombCount?: number }) => void;
   joinRoom: (roomId: string, playerName: string) => void;
   makeMove: (tileIndex: number) => void;
   restartGame: () => void;
@@ -16,6 +17,7 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const socketRef = useRef<Socket | null>(null);
   const { setGameState } = useGameStore();
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     const socket = io('http://192.168.4.9:3001');
@@ -23,6 +25,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     socket.on('connect', () => {
       console.log('Connected to server');
+      if (user) {
+        socket.emit('authenticate', { userId: user.id });
+      }
     });
 
     socket.on('room_created', ({ roomId, gameState, playerId }) => {
@@ -38,10 +43,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     socket.on('game_started', ({ gameState }) => {
-      setGameState(gameState);
-    });
-
-    socket.on('tile_revealed', ({ tileIndex, isBomb, gameState }) => {
       setGameState(gameState);
     });
 
@@ -64,10 +65,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       socket.disconnect();
     };
-  }, [setGameState]);
+  }, [setGameState, user]);
 
-  const createRoom = (playerName: string) => {
-    socketRef.current?.emit('create_room', { playerName });
+  const createRoom = (playerName: string, settings?: { maxPlayers?: number, bombCount?: number }) => {
+    socketRef.current?.emit('create_room', { playerName, settings });
     setGameState({ playerName });
   };
 
