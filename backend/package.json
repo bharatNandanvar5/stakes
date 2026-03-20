@@ -5,7 +5,7 @@
   "scripts": {
     "start": "nest start --watch",
     "start:dev": "nest start --watch",
-    "build": "nest build"
+    "build": "npx nest build"
   },
   "keywords": [],
   "author": "",
