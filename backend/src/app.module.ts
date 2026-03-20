@@ -5,6 +5,7 @@ import { GameModule } from './game/game.module';
 import { RoomModule } from './room/room.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -21,5 +22,6 @@ import { AdminModule } from './admin/admin.module';
     RoomModule,
     AdminModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule { }

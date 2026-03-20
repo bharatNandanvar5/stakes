@@ -20,6 +20,7 @@ export class AdminController {
   getHealth() {
     return { status: 'OK' };
   }
+
   @Get('stats')
   async getStats() {
     const userCount = await this.usersService.count();
