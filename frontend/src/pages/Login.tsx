@@ -1,28 +1,32 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { useAuthStore } from '../store/useAuthStore';
-import { motion } from 'framer-motion';
-import { LogIn, Lock, User, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import { useAuthStore } from "../store/useAuthStore";
+import { motion } from "framer-motion";
+import { LogIn, Lock, User, AlertCircle } from "lucide-react";
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
-      const response = await axios.post('http://192.168.4.9:3001/auth/login', { username, password });
+      // const response = await axios.post(import.meta.env.BACKEND_URL + '/auth/login', { username, password });
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/auth/login`,
+        { username, password },
+      );
       setAuth(response.data.user, response.data.access_token);
-      navigate('/');
+      navigate("/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -39,8 +43,12 @@ const Login: React.FC = () => {
         className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase mb-2">WELCOME BACK</h1>
-          <p className="text-gray-500 font-bold tracking-widest text-xs uppercase">Enter your credentials to enter the arena</p>
+          <h1 className="text-4xl font-black italic tracking-tighter uppercase mb-2">
+            WELCOME BACK
+          </h1>
+          <p className="text-gray-500 font-bold tracking-widest text-xs uppercase">
+            Enter your credentials to enter the arena
+          </p>
         </div>
 
         <div className="glass p-8 rounded-[2rem] shadow-2xl">
@@ -100,8 +108,11 @@ const Login: React.FC = () => {
 
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <p className="text-gray-500 text-sm font-bold">
-              DON'T HAVE AN ACCOUNT?{' '}
-              <Link to="/register" className="text-primary hover:text-primary-hover transition-colors">
+              DON'T HAVE AN ACCOUNT?{" "}
+              <Link
+                to="/register"
+                className="text-primary hover:text-primary-hover transition-colors"
+              >
                 CREATE ONE NOW
               </Link>
             </p>

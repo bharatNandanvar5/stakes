@@ -17,7 +17,7 @@ const Register: React.FC = () => {
     setError('');
     setLoading(true);
     try {
-      await axios.post('http://192.168.4.9:3001/auth/register', { username, password });
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, { username, password });
       setSuccess(true);
       setTimeout(() => navigate('/'), 2000);
     } catch (err: any) {

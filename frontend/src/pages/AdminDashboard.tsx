@@ -32,10 +32,10 @@ const AdminDashboard: React.FC = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const [statsRes, usersRes, historyRes, liveRes] = await Promise.all([
-        axios.get('http://192.168.4.9:3001/admin/stats', config),
-        axios.get('http://192.168.4.9:3001/admin/users', config),
-        axios.get('http://192.168.4.9:3001/admin/history', config),
-        axios.get('http://192.168.4.9:3001/admin/live-games', config),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/stats`, config),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/users`, config),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/history`, config),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/live-games`, config),
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
