@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark: #06090f;
+  --color-dark-lighter: #0d1117;
+  --color-dark-card: #161b22;
+  --color-primary: #00e701;
+  --color-primary-hover: #1fff20;
+  --color-accent-bomb: #ff4d4d;
+  --color-accent-gem: #00e701;
+}
+
+:root {
+  --glass-bg: rgba(22, 27, 34, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  background: radial-gradient(circle at top right, #161b22, #06090f);
+  color: white;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  min-height: 100vh;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.gem-glow {
+  filter: drop-shadow(0 0 8px var(--color-primary));
+}
+
+.bomb-explosion {
+  filter: drop-shadow(0 0 12px var(--color-accent-bomb));
+}
+
+.shadow-gem {
+  box-shadow: 0 0 20px rgba(0, 231, 1, 0.15);
+}
+
+.shadow-bomb {
+  box-shadow: 0 0 20px rgba(255, 77, 77, 0.15);
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes shine {
+  100% {
+    left: 125%;
+  }
+}
+
+.animate-shine {
+  animation: shine 1.5s infinite;
+}
+
+@keyframes bounce-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-bounce-x {
+  animation: bounce-x 1s infinite;
+}
