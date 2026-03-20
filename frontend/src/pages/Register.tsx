@@ -19,7 +19,7 @@ const Register: React.FC = () => {
     try {
       await axios.post('http://192.168.4.9:3001/auth/register', { username, password });
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate('/'), 2000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -110,7 +110,7 @@ const Register: React.FC = () => {
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <p className="text-gray-500 text-sm font-bold">
               ALREADY HAVE AN ACCOUNT?{' '}
-              <Link to="/login" className="text-primary hover:text-primary-hover transition-colors">
+              <Link to="/" className="text-primary hover:text-primary-hover transition-colors">
                 LOG IN HERE
               </Link>
             </p>
