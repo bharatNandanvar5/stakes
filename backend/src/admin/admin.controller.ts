@@ -14,8 +14,12 @@ export class AdminController {
     private historyService: HistoryService,
     private usersService: UsersService,
     private roomService: RoomService,
-  ) {}
+  ) { }
 
+  @Get('health')
+  getHealth() {
+    return { status: 'OK' };
+  }
   @Get('stats')
   async getStats() {
     const userCount = await this.usersService.count();
