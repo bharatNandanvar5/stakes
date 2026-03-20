@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useSocket } from "../context/SocketContext";
 import { useAuthStore } from "../store/useAuthStore";
 import { motion } from "framer-motion";
-import { Play, LogIn, Swords, Bomb, Users, LogOut, Settings, LayoutDashboard } from "lucide-react";
+import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Lobby: React.FC = () => {

@@ -11,6 +11,7 @@ export interface Player {
   name: string;
   socketId: string;
   score: number;
+  matchWins: number;
 }
 
 export interface GameState {

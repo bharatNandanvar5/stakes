@@ -165,12 +165,11 @@ import { useGameStore, GameStatus } from "../store/useGameStore";
 import GameGrid from "../components/GameGrid";
 import ScoreBoard from "../components/ScoreBoard";
 import GameOverModal from "../components/GameOverModal";
-import { motion } from "framer-motion";
 import { Share2, Info, Users, Clock, Bomb } from "lucide-react";
 import { useSocket } from "../context/SocketContext";
 
 const GameRoom: React.FC = () => {
-  const { roomId, status, bombCount, players, turnPlayerId, playerId } =
+  const { roomId, status, bombCount, turnPlayerId, playerId } =
     useGameStore();
   const { leaveRoom } = useSocket();
 

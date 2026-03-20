@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 import { motion } from 'framer-motion';
-import { LogIn, UserPlus, Lock, User, AlertCircle } from 'lucide-react';
+import { LogIn, Lock, User, AlertCircle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');

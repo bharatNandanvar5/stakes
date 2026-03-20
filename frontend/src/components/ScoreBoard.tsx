@@ -1,7 +1,7 @@
 import React from "react";
 import { useGameStore, type Player } from "../store/useGameStore";
 import { Trophy, User, ArrowRight, Users } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const PlayerCard: React.FC<{
   player: Player;
@@ -58,7 +58,7 @@ const PlayerCard: React.FC<{
         </div>
         <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
           <span className="text-[9px] font-black text-gray-500">WINS:</span>
-          <span className="text-[10px] font-black text-primary">{(player as any).matchWins || 0}</span>
+          <span className="text-[10px] font-black text-primary">{player?.matchWins || 0}</span>
         </div>
       </div>
     </div>
