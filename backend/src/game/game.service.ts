@@ -11,12 +11,12 @@ export enum GameState {
 export class GameService {
   private readonly GRID_SIZE = 25; // 5x5
 
-  initializeGame(roomId: string, players: any[]): any {
-    const bombCount = 1 //Math.floor(Math.random() * 10) + 1; // 1 to 10 bombs
+  initializeGame(roomId: string, players: any[], bombCount: number): any {
+    const finalBombCount = Math.min(Math.max(bombCount || 1, 1), 20); // 1 to 20 bombs
     const grid = new Array(this.GRID_SIZE).fill(0);
     const bombIndices = new Set<number>();
 
-    while (bombIndices.size < bombCount) {
+    while (bombIndices.size < finalBombCount) {
       const randomIndex = Math.floor(Math.random() * this.GRID_SIZE);
       bombIndices.add(randomIndex);
     }
@@ -32,7 +32,7 @@ export class GameService {
       grid, // Full grid with bombs (server-side only)
       revealed: new Array(this.GRID_SIZE).fill(false),
       status: GameState.PLAYING,
-      bombCount,
+      bombCount: finalBombCount,
     };
   }
 
@@ -50,7 +50,12 @@ export class GameService {
 
     if (isBomb) {
       state.status = GameState.FINISHED;
-      state.winnerId = state.players.find((p) => p.id !== playerId)?.id;
+      // Winner is everyone else? Or the last person standing? 
+      // In this version, if you hit a bomb, you lose, and others share the victory or the highest score wins.
+      // Let's say: hitting a bomb makes you lose, and we find the winner among other players.
+      state.winnerId = state.players
+        .filter(p => p.id !== playerId)
+        .sort((a, b) => b.score - a.score)[0]?.id || playerId; // Fallback to current if no one else
       return { isBomb: true, state };
     }
 
@@ -58,9 +63,10 @@ export class GameService {
     const currentPlayer = state.players.find((p) => p.id === playerId);
     currentPlayer.score += 100;
 
-    // Switch turn
-    const nextPlayer = state.players.find((p) => p.id !== playerId);
-    state.turnPlayerId = nextPlayer.id;
+    // Switch turn to NEXT player in circle
+    const currentIndex = state.players.findIndex(p => p.id === playerId);
+    const nextIndex = (currentIndex + 1) % state.players.length;
+    state.turnPlayerId = state.players[nextIndex].id;
 
     // Check if all gems are revealed
     const totalGems = this.GRID_SIZE - state.bombCount;
@@ -68,7 +74,6 @@ export class GameService {
 
     if (revealedGems === totalGems) {
       state.status = GameState.FINISHED;
-      // Winner is the one with more points (or the one who finished if tied)
       state.winnerId = state.players.sort((a, b) => b.score - a.score)[0].id;
     }
 

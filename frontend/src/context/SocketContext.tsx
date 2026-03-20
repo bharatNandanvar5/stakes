@@ -1,10 +1,14 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { useGameStore } from '../store/useGameStore';
+import React, { createContext, useContext, useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import { useGameStore } from "../store/useGameStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 interface SocketContextType {
   socket: Socket | null;
-  createRoom: (playerName: string) => void;
+  createRoom: (
+    playerName: string,
+    settings?: { maxPlayers?: number; bombCount?: number },
+  ) => void;
   joinRoom: (roomId: string, playerName: string) => void;
   makeMove: (tileIndex: number) => void;
   restartGame: () => void;
@@ -13,84 +17,98 @@ interface SocketContextType {
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
-export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const socketRef = useRef<Socket | null>(null);
   const { setGameState } = useGameStore();
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    const socket = io('http://192.168.4.9:3001');
+    const socket = io(`${import.meta.env.VITE_BACKEND_WS_URL}`);
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      console.log('Connected to server');
+    socket.on("connect", () => {
+      console.log("Connected to server");
+      if (user) {
+        socket.emit("authenticate", { userId: user.id });
+      }
     });
 
-    socket.on('room_created', ({ roomId, gameState, playerId }) => {
+    socket.on("room_created", ({ roomId, gameState, playerId }) => {
       setGameState({ roomId, ...gameState, playerId });
     });
 
-    socket.on('room_joined', ({ roomId, gameState, playerId }) => {
+    socket.on("room_joined", ({ roomId, gameState, playerId }) => {
       setGameState({ roomId, ...gameState, playerId });
     });
 
-    socket.on('player_joined', ({ gameState }) => {
+    socket.on("player_joined", ({ gameState }) => {
       setGameState(gameState);
     });
 
-    socket.on('game_started', ({ gameState }) => {
+    socket.on("game_started", ({ gameState }) => {
       setGameState(gameState);
     });
 
-    socket.on('tile_revealed', ({ tileIndex, isBomb, gameState }) => {
+    socket.on("game_update", ({ gameState }) => {
       setGameState(gameState);
     });
 
-    socket.on('game_update', ({ gameState }) => {
-      setGameState(gameState);
-    });
-
-    socket.on('game_over', ({ winnerId, gameState }) => {
+    socket.on("game_over", ({ winnerId, gameState }) => {
       setGameState({ ...gameState, winnerId });
     });
 
-    socket.on('error', ({ message }) => {
+    socket.on("error", ({ message }) => {
       alert(message);
     });
 
-    socket.on('room_state', (gameState) => {
+    socket.on("room_state", (gameState) => {
       setGameState(gameState);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [setGameState]);
+  }, [setGameState, user]);
 
-  const createRoom = (playerName: string) => {
-    socketRef.current?.emit('create_room', { playerName });
+  const createRoom = (
+    playerName: string,
+    settings?: { maxPlayers?: number; bombCount?: number },
+  ) => {
+    socketRef.current?.emit("create_room", { playerName, settings });
     setGameState({ playerName });
   };
 
   const joinRoom = (roomId: string, playerName: string) => {
-    socketRef.current?.emit('join_room', { roomId, playerName });
+    socketRef.current?.emit("join_room", { roomId, playerName });
     setGameState({ playerName });
   };
 
   const makeMove = (tileIndex: number) => {
-    socketRef.current?.emit('make_move', { tileIndex });
+    socketRef.current?.emit("make_move", { tileIndex });
   };
 
   const restartGame = () => {
-    socketRef.current?.emit('restart_game');
+    socketRef.current?.emit("restart_game");
   };
 
   const leaveRoom = () => {
-    socketRef.current?.emit('leave_room');
+    socketRef.current?.emit("leave_room");
     useGameStore.getState().resetGame();
   };
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, createRoom, joinRoom, makeMove, restartGame, leaveRoom }}>
+    <SocketContext.Provider
+      value={{
+        socket: socketRef.current,
+        createRoom,
+        joinRoom,
+        makeMove,
+        restartGame,
+        leaveRoom,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );
@@ -99,7 +117,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (!context) {
-    throw new Error('useSocket must be used within a SocketProvider');
+    throw new Error("useSocket must be used within a SocketProvider");
   }
   return context;
 };
