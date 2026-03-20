@@ -58,7 +58,7 @@ function App() {
               }
             />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <PrivateRoute>
                   {!roomId ? <Lobby /> : <GameRoom />}
