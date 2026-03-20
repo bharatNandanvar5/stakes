@@ -42,9 +42,7 @@ const PlayerCard: React.FC<{
 
     <div className="flex-1">
       <div className="flex items-center gap-2 mb-1">
-        <span
-          className={`font-black uppercase tracking-wider text-sm ${isTurn ? "text-white" : "text-gray-400"}`}
-        >
+        <span className={`font-black uppercase tracking-wider text-sm ${isTurn ? 'text-white' : 'text-gray-400'}`}>
           {player.name}
         </span>
         {isMe && (
@@ -53,12 +51,14 @@ const PlayerCard: React.FC<{
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <div
-          className={`flex items-center gap-1.5 font-mono font-black text-lg ${isTurn ? "text-primary" : "text-gray-500"}`}
-        >
+      <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-1.5 font-mono font-black text-lg ${isTurn ? 'text-primary' : 'text-gray-500'}`}>
           <Trophy className="w-4 h-4" />
           {player.score.toLocaleString()}
+        </div>
+        <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
+          <span className="text-[9px] font-black text-gray-500">WINS:</span>
+          <span className="text-[10px] font-black text-primary">{(player as any).matchWins || 0}</span>
         </div>
       </div>
     </div>
