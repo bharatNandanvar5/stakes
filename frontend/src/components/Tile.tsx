@@ -17,7 +17,6 @@ interface TileProps {
 }
 
 const Tile: React.FC<TileProps> = ({
-  index,
   value,
   revealed,
   disabled,

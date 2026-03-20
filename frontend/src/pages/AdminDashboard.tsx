@@ -8,11 +8,9 @@ import {
   Activity, 
   Shield, 
   ArrowLeft,
-  Search,
   Trophy,
-  Calendar
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -23,7 +21,6 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   const token = useAuthStore((state) => state.token);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
