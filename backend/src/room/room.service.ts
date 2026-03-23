@@ -88,12 +88,35 @@ export class RoomService {
     return initializedGame;
   }
 
+  private onlineUsers = new Map<string, { userId: string; username: string; socketId: string }>();
+
+  addOnlineUser(socketId: string, userId: string, username: string) {
+    this.onlineUsers.set(socketId, { userId, username, socketId });
+  }
+
+  removeOnlineUser(socketId: string) {
+    this.onlineUsers.delete(socketId);
+  }
+
+  getOnlineUsers() {
+    return Array.from(this.onlineUsers.values());
+  }
+
+  getOnlineUserByUserId(userId: string) {
+    return Array.from(this.onlineUsers.values()).find(u => u.userId === userId);
+  }
+
+  getRoom(roomId: string): GameState | undefined {
+    return this.rooms.get(roomId);
+  }
+
   getRoomBySocketId(socketId: string): GameState | undefined {
     const roomId = this.playerToRoom.get(socketId);
     return roomId ? this.rooms.get(roomId) : undefined;
   }
 
-  getAllRooms(): GameState[] {
+  getAllRooms(): any[] {
+    // Return full state for admin (including grid)
     return Array.from(this.rooms.values());
   }
 

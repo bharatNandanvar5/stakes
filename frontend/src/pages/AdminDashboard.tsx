@@ -9,6 +9,8 @@ import {
   Shield,
   ArrowLeft,
   Trophy,
+  Bomb,
+  Gem,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -279,6 +281,35 @@ const AdminDashboard: React.FC = () => {
                       {g.roomId}
                     </div>
                   </div>
+
+                  {/* Game Grid Visualization */}
+                  <div className="mb-8 p-4 bg-dark-lighter/50 rounded-2xl border border-white/5">
+                    <div className="grid grid-cols-5 gap-1.5 aspect-square">
+                      {g.revealed.map((isRevealed: boolean, i: number) => (
+                        <div
+                          key={i}
+                          className={`aspect-square rounded-sm border ${
+                            isRevealed
+                              ? g.grid[i] === 1
+                                ? "bg-accent-bomb/40 border-accent-bomb/50"
+                                : "bg-primary/40 border-primary/50"
+                              : "bg-dark-card border-white/5"
+                          }`}
+                        >
+                          {isRevealed && (
+                            <div className="w-full h-full flex items-center justify-center">
+                              {g.grid[i] === 1 ? (
+                                <Bomb className="w-2 h-2 text-white" />
+                              ) : (
+                                <Gem className="w-2 h-2 text-white" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="space-y-4 mb-8">
                     {g.players.map((p: any) => (
                       <div

@@ -13,6 +13,15 @@ interface SocketContextType {
   makeMove: (tileIndex: number) => void;
   restartGame: () => void;
   leaveRoom: () => void;
+  invitePlayer: (
+    toUserId: string,
+    settings: { maxPlayers: number; bombCount: number },
+  ) => void;
+  acceptInvite: (
+    fromSocketId: string,
+    settings: { maxPlayers: number; bombCount: number },
+  ) => void;
+  rejectInvite: (fromSocketId: string) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -21,11 +30,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const socketRef = useRef<Socket | null>(null);
-  const { setGameState } = useGameStore();
+  const { setGameState, setOnlineUsers, setIncomingInvite } = useGameStore();
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    const socket = io(`${import.meta.env.VITE_BACKEND_WS_URL}`);
+    const socket = io(
+      import.meta.env.VITE_BACKEND_WS_URL || "http://localhost:3001",
+    );
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -33,6 +44,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       if (user) {
         socket.emit("authenticate", { userId: user.id });
       }
+    });
+
+    socket.on("online_users", (users) => {
+      setOnlineUsers(users);
+    });
+
+    socket.on("game_invite", (invite) => {
+      setIncomingInvite(invite);
+    });
+
+    socket.on("invite_rejected", ({ fromUser }) => {
+      alert(`${fromUser.username} rejected your invite.`);
     });
 
     socket.on("room_created", ({ roomId, gameState, playerId }) => {
@@ -70,7 +93,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       socket.disconnect();
     };
-  }, [setGameState, user]);
+  }, [setGameState, setOnlineUsers, setIncomingInvite, user]);
 
   const createRoom = (
     playerName: string,
@@ -98,6 +121,26 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     useGameStore.getState().resetGame();
   };
 
+  const invitePlayer = (
+    toUserId: string,
+    settings: { maxPlayers: number; bombCount: number },
+  ) => {
+    socketRef.current?.emit("invite_player", { toUserId, settings });
+  };
+
+  const acceptInvite = (
+    fromSocketId: string,
+    settings: { maxPlayers: number; bombCount: number },
+  ) => {
+    socketRef.current?.emit("accept_invite", { fromSocketId, settings });
+    setIncomingInvite(null);
+  };
+
+  const rejectInvite = (fromSocketId: string) => {
+    socketRef.current?.emit("reject_invite", { fromSocketId });
+    setIncomingInvite(null);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -107,6 +150,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
         makeMove,
         restartGame,
         leaveRoom,
+        invitePlayer,
+        acceptInvite,
+        rejectInvite,
       }}
     >
       {children}

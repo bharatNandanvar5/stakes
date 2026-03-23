@@ -37,9 +37,12 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    this.roomService.removeOnlineUser(client.id);
+    this.server.emit('online_users', this.roomService.getOnlineUsers());
+
     const roomId = this.roomService.removePlayer(client.id);
     if (roomId) {
-      const room = this.roomService.getRoomBySocketId(roomId);
+      const room = this.roomService.getRoom(roomId);
       if (room) {
         this.server.to(roomId).emit('room_state', this.gameService.getClientState(room, ''));
       }
@@ -47,14 +50,87 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('authenticate')
-  handleAuthenticate(
+  async handleAuthenticate(
     @MessageBody() data: { userId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    // In a real app, we would verify the JWT here. 
-    // For now, we'll trust the userId from the client to link the session.
     (client as any).userId = data.userId;
+    const user: any = await this.usersService.findById(data.userId);
+    if (user) {
+      this.roomService.addOnlineUser(client.id, user.id, user.username);
+      this.server.emit('online_users', this.roomService.getOnlineUsers());
+    }
     console.log(`Socket ${client.id} authenticated as user ${data.userId}`);
+  }
+
+  @SubscribeMessage('invite_player')
+  handleInvitePlayer(
+    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number } },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
+    const targetUser = this.roomService.getOnlineUserByUserId(data.toUserId);
+
+    if (fromUser && targetUser) {
+      this.server.to(targetUser.socketId).emit('game_invite', {
+        fromUser,
+        settings: data.settings
+      });
+    }
+  }
+
+  @SubscribeMessage('accept_invite')
+  handleAcceptInvite(
+    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number } },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === data.fromSocketId);
+    const toUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
+
+    if (fromUser && toUser) {
+      // Create a room and join both
+      const roomId = this.roomService.createRoom(fromUser.username, fromUser.socketId, data.settings);
+      this.roomService.joinRoom(roomId, toUser.username, toUser.socketId);
+
+      const room: any = this.roomService.getRoom(roomId);
+
+      // Update players with their user IDs for history tracking
+      const p1 = room.players.find(p => p.socketId === fromUser.socketId);
+      const p2 = room.players.find(p => p.socketId === toUser.socketId);
+      if (p1) p1.userId = fromUser.userId;
+      if (p2) p2.userId = toUser.userId;
+
+      // Notify both players
+      (this.server.to(fromUser.socketId) as any).join(roomId);
+      (this.server.to(toUser.socketId) as any).join(roomId);
+
+      this.server.to(fromUser.socketId).emit('room_created', {
+        roomId,
+        gameState: this.gameService.getClientState(room, fromUser.socketId),
+        playerId: p1?.id
+      });
+
+      this.server.to(toUser.socketId).emit('room_joined', {
+        roomId,
+        gameState: this.gameService.getClientState(room, toUser.socketId),
+        playerId: p2?.id
+      });
+
+      this.server.to(roomId).emit('game_started', { gameState: this.gameService.getClientState(room, '') });
+    }
+  }
+
+  @SubscribeMessage('reject_invite')
+  handleRejectInvite(
+    @MessageBody() data: { fromSocketId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const toUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
+    if (toUser) {
+      this.server.to(data.fromSocketId).emit('invite_rejected', {
+        fromUser: toUser
+      });
+    }
   }
 
   @SubscribeMessage('create_room')
@@ -70,7 +146,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (room) {
       const player = room.players.find(p => p.socketId === client.id);
       if ((client as any).userId) player.userId = (client as any).userId;
-      
+
       const response = {
         roomId,
         gameState: this.gameService.getClientState(room, client.id),
@@ -94,11 +170,11 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const player = gameState.players.find(p => p.socketId === client.id);
       if ((client as any).userId) player.userId = (client as any).userId;
-      
-      const response = { 
-        roomId, 
+
+      const response = {
+        roomId,
         gameState: this.gameService.getClientState(gameState, ''),
-        playerId: player?.id 
+        playerId: player?.id
       };
       console.log('Emitting room_joined:', response);
       client.emit('room_joined', response);
@@ -163,13 +239,13 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
 
     await this.historyService.create(historyData);
-    
+
     // Update user stats
     for (const player of state.players) {
       if (player.userId) {
         await this.usersService.updateStats(
-          player.userId, 
-          player.id === state.winnerId, 
+          player.userId,
+          player.id === state.winnerId,
           player.score
         );
       }

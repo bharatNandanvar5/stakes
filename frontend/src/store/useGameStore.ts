@@ -21,18 +21,15 @@ export interface GameState {
   grid: (number | null)[];
   revealed: boolean[];
   status: GameStatus;
-  winnerId?: string;
   bombCount: number;
-  playerName: string;
-  playerId: string | null;
+  winnerId?: string;
+  playerId?: string | null;
+  playerName?: string;
+  onlineUsers: { userId: string; username: string; socketId: string }[];
+  incomingInvite: { fromUser: any; settings: any } | null;
 }
 
-interface GameStore extends GameState {
-  setGameState: (state: Partial<GameState>) => void;
-  resetGame: () => void;
-}
-
-export const useGameStore = create<GameStore>((set) => ({
+const initialState: GameState = {
   roomId: null,
   players: [],
   turnPlayerId: null,
@@ -40,20 +37,25 @@ export const useGameStore = create<GameStore>((set) => ({
   revealed: new Array(25).fill(false),
   status: GameStatus.WAITING,
   bombCount: 0,
-  playerName: '',
+  winnerId: undefined,
   playerId: null,
+  playerName: '',
+  onlineUsers: [],
+  incomingInvite: null,
+};
 
+export const useGameStore = create<GameState & {
+  setGameState: (state: Partial<GameState>) => void;
+  resetGame: () => void;
+  setOnlineUsers: (users: any[]) => void;
+  setIncomingInvite: (invite: any) => void;
+}>((set) => ({
+  ...initialState,
   setGameState: (state) => set((prev) => {
     console.log('Zustand setting state:', state);
     return { ...prev, ...state };
   }),
-  resetGame: () => set({
-    grid: new Array(25).fill(null),
-    revealed: new Array(25).fill(false),
-    status: GameStatus.WAITING,
-    winnerId: undefined,
-  }),
+  setOnlineUsers: (onlineUsers) => set({ onlineUsers }),
+  setIncomingInvite: (incomingInvite) => set({ incomingInvite }),
+  resetGame: () => set(initialState),
 }));
-
-
-// SERF1E
