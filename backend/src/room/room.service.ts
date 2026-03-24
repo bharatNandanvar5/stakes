@@ -6,7 +6,7 @@ import { GameService, GameState } from '../game/game.service';
 @Injectable()
 export class RoomService {
   private rooms: Map<string, GameState> = new Map();
-  private playerToRoom: Map<string, string> = new Map(); // socketId -> roomId
+  private playerToRoom: Map<string, string> = new Map();
 
   constructor(private readonly gameService: GameService) { }
 
@@ -116,7 +116,6 @@ export class RoomService {
   }
 
   getAllRooms(): any[] {
-    // Return full state for admin (including grid)
     return Array.from(this.rooms.values());
   }
 
@@ -130,7 +129,7 @@ export class RoomService {
           this.rooms.delete(roomId);
         } else {
           room.status = GameState.FINISHED;
-          room.winnerId = room.players[0].id; // The remaining player wins
+          room.winnerId = room.players[0].id;
         }
       }
       this.playerToRoom.delete(socketId);
@@ -138,15 +137,4 @@ export class RoomService {
     }
     return null;
   }
-
-  // restartGame(roomId: string): GameState {
-  //   const room: any = this.rooms.get(roomId);
-  //   if (!room || room.status !== GameState.FINISHED) {
-  //     throw new Error('Cannot restart: room not found or game not finished');
-  //   }
-
-  //   const initializedGame = this.gameService.initializeGame(roomId, room.players);
-  //   this.rooms.set(roomId, initializedGame);
-  //   return initializedGame;
-  // }
 }

@@ -101,8 +101,14 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (p2) p2.userId = toUser.userId;
 
       // Notify both players
-      (this.server.to(fromUser.socketId) as any).join(roomId);
-      (this.server.to(toUser.socketId) as any).join(roomId);
+      // this.server.to(fromUser.socketId).join(roomId);
+      // this.server.to(toUser.socketId).join(roomId);
+
+      const fromSocket = this.server.sockets.sockets.get(fromUser.socketId);
+      const toSocket = this.server.sockets.sockets.get(toUser.socketId);
+
+      fromSocket?.join(roomId);
+      toSocket?.join(roomId);
 
       this.server.to(fromUser.socketId).emit('room_created', {
         roomId,
