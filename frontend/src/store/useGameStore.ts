@@ -29,7 +29,7 @@ export interface GameState {
   status: GameStatus;
   gameType: GameType;
   bombCount: number;
-  winnerId?: string;
+  winnerIds: string[];
   playerId?: string;
   playerName?: string;
   onlineUsers: { userId: string; username: string; socketId: string }[];
@@ -46,7 +46,7 @@ const initialState: GameState = {
   status: GameStatus.WAITING,
   gameType: GameType.MINES,
   bombCount: 0,
-  winnerId: undefined,
+  winnerIds: [],
   playerId: undefined,
   playerName: undefined,
   onlineUsers: [],

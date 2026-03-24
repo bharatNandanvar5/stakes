@@ -9,8 +9,8 @@ export class GameHistory extends Document {
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'User' }])
   players: string[];
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-  winnerId: string;
+  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'User' }])
+  winnerIds: string[];
 
   @Prop({ type: Object })
   settings: {

@@ -34,13 +34,13 @@ const Particle: React.FC<{ type: 'win' | 'loss' | 'draw'; delay: number }> = ({ 
 };
 
 const GameOverModal: React.FC = () => {
-  const { status, winnerId, players, playerId, gameType } = useGameStore();
+  const { status, winnerIds, players, playerId, gameType } = useGameStore();
   const { restartGame, leaveRoom } = useSocket();
 
   if (status !== GameStatus.FINISHED) return null;
 
-  const isDraw = winnerId === 'draw';
-  const isWinner = winnerId === playerId;
+  const isDraw = gameType === GameType.TIC_TAC_TOE && winnerIds.length === 0;
+  const isWinner = winnerIds.includes(playerId || '');
   const isLoss = !isWinner && !isDraw;
   const isMines = gameType === GameType.MINES;
 
@@ -130,7 +130,7 @@ const GameOverModal: React.FC = () => {
                     )}
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        p.id === winnerId ? 'bg-primary/20 text-primary' : 'bg-dark-lighter text-gray-500'
+                        winnerIds.includes(p.id) ? 'bg-primary/20 text-primary' : 'bg-dark-lighter text-gray-500'
                       }`}>
                         <User className="w-4 h-4" />
                       </div>
@@ -146,12 +146,12 @@ const GameOverModal: React.FC = () => {
                     <div className="text-xl font-black font-mono leading-none flex items-center gap-1.5">
                       {isMines ? (
                         <>
-                          {p.id === winnerId ? <Gem className="w-4 h-4 text-primary" /> : <Bomb className="w-4 h-4 text-accent-bomb" />}
+                          {winnerIds.includes(p.id) ? <Gem className="w-4 h-4 text-primary" /> : <Bomb className="w-4 h-4 text-accent-bomb" />}
                           {p.score.toLocaleString()}
                         </>
                       ) : (
                         <>
-                          <Trophy className={`w-4 h-4 ${p.id === winnerId ? 'text-primary' : 'text-gray-600'}`} />
+                          <Trophy className={`w-4 h-4 ${winnerIds.includes(p.id) ? 'text-primary' : 'text-gray-600'}`} />
                           {p.matchWins}
                         </>
                       )}

@@ -27,6 +27,7 @@ export class GameService {
       revealed: new Array(this.GRID_SIZE).fill(false),
       status: GameState.PLAYING,
       bombCount: finalBombCount,
+      winnerIds: [],
     };
   }
 
@@ -44,12 +45,15 @@ export class GameService {
 
     if (isBomb) {
       state.status = GameState.FINISHED;
-      // Winner is everyone else? Or the last person standing? 
-      // In this version, if you hit a bomb, you lose, and others share the victory or the highest score wins.
-      // Let's say: hitting a bomb makes you lose, and we find the winner among other players.
-      state.winnerId = state.players
+      // All other players are winners
+      state.winnerIds = state.players
         .filter(p => p.id !== playerId)
-        .sort((a, b) => b.score - a.score)[0]?.id || playerId; // Fallback to current if no one else
+        .map(p => p.id);
+
+      // If it was a 1-player game (though settings say min 2, just in case), the current player is the winner/loser
+      if (state.winnerIds.length === 0) {
+        state.winnerIds = [playerId]; // This would mean they lost, but for logic consistency
+      }
       return state;
     }
 
@@ -68,7 +72,9 @@ export class GameService {
 
     if (revealedGems === totalGems) {
       state.status = GameState.FINISHED;
-      state.winnerId = state.players.sort((a, b) => b.score - a.score)[0].id;
+      // In this case, the one with highest score wins? 
+      // Or everyone wins? Let's say everyone wins if all gems found.
+      state.winnerIds = state.players.map(p => p.id);
     }
 
     return state;
@@ -90,7 +96,7 @@ export class GameService {
       grid: publicGrid,
       revealed: state.revealed || new Array(this.GRID_SIZE).fill(false),
       status: state.status,
-      winnerId: state.winnerId,
+      winnerIds: state.winnerIds || [],
       bombCount: state.bombCount,
     };
   }

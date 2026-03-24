@@ -37,7 +37,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private getClientState(room: any, socketId: string = '') {
     let gameState: any;
     const gameData = room.gameData || {};
-    
+
     if (room.gameType === GameType.TIC_TAC_TOE) {
       gameState = this.tttService.getClientState(gameData);
     } else {
@@ -257,15 +257,20 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const playersWithUserId = room.players.filter(p => p.userId);
     if (playersWithUserId.length === 0) return;
 
+    const winnerIds = room.gameData?.winnerIds || [];
+    const winnerUserIds = room.players
+      .filter(p => winnerIds.includes(p.id) && p.userId)
+      .map(p => p.userId);
+
     const historyData = {
       roomId: room.roomId,
       players: playersWithUserId.map(p => p.userId),
-      winnerId: room.players.find(p => p.id === room.gameData?.winnerId)?.userId,
+      winnerIds: winnerUserIds,
       settings: room.settings,
       results: room.players.map(p => ({
         userId: p.userId,
         score: p.score,
-        isWinner: p.id === room.gameData?.winnerId
+        isWinner: winnerIds.includes(p.id)
       }))
     };
 
@@ -276,7 +281,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (player.userId) {
         await this.usersService.updateStats(
           player.userId,
-          player.id === room?.gameData?.winnerId,
+          winnerIds.includes(player.id),
           player.score
         );
       }
@@ -290,8 +295,8 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const newGameState = this.roomService.restartGame(room.roomId);
-      this.server.to(room.roomId).emit('game_started', { 
-        gameState: this.getClientState(newGameState) 
+      this.server.to(room.roomId).emit('game_started', {
+        gameState: this.getClientState(newGameState)
       });
     } catch (error) {
       client.emit('error', { message: error.message });

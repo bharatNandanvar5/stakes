@@ -16,7 +16,7 @@ export class TicTacToeService {
       turnPlayerId: players[0].id,
       board: new Array(this.BOARD_SIZE).fill(null),
       status: GameState.PLAYING,
-      winnerId: null,
+      winnerIds: [],
     };
   }
 
@@ -35,12 +35,12 @@ export class TicTacToeService {
     const winnerSymbol = this.checkWinner(state.board);
     if (winnerSymbol) {
       state.status = GameState.FINISHED;
-      state.winnerId = state.players.find(p => p.symbol === winnerSymbol).id;
-      const winner = state.players.find(p => p.id === state.winnerId);
+      const winner = state.players.find(p => p.symbol === winnerSymbol);
+      state.winnerIds = [winner.id];
       winner.score += 1;
     } else if (state.board.every(cell => cell !== null)) {
       state.status = GameState.FINISHED;
-      state.winnerId = 'draw';
+      state.winnerIds = []; // empty array means draw
     } else {
       // Switch turns
       const currentIndex = state.players.findIndex(p => p.id === playerId);
@@ -73,7 +73,7 @@ export class TicTacToeService {
       turnPlayerId: state.turnPlayerId,
       board: state.board || new Array(this.BOARD_SIZE).fill(null),
       status: state.status,
-      winnerId: state.winnerId,
+      winnerIds: state.winnerIds || [],
     };
   }
 }

@@ -85,9 +85,11 @@ export class RoomService {
       throw new Error('Cannot restart: room not found or game not finished');
     }
 
+    const winnerIds = room.gameData?.winnerIds || [];
+
     // Move scores to matchWins if they won
     room.players.forEach(p => {
-      if (p.id === room.gameData?.winnerId) p.matchWins++;
+      if (winnerIds.includes(p.id)) p.matchWins++;
       p.score = 0;
     });
 
@@ -142,7 +144,8 @@ export class RoomService {
           this.rooms.delete(roomId);
         } else {
           room.status = GameState.FINISHED;
-          room.winnerId = room.players[0].id;
+          room.gameData = room.gameData || {};
+          room.gameData.winnerIds = [room.players[0].id];
         }
       }
       this.playerToRoom.delete(socketId);
