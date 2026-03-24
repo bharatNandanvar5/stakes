@@ -7,20 +7,39 @@ on:
       - completed
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect Changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
   deploy-backend:
-    if: > 
-      github.event.workflow_run.conclusion == 'success' &&
-      contains(github.event.workflow_run.head_commit.message, 'backend')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true' &&
+        github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render Deploy (Backend)
+      - name: Deploy Backend
         run: curl ${{ secrets.RENDER_BACKEND_DEPLOY }}
 
   deploy-frontend:
-    if: > 
-      github.event.workflow_run.conclusion == 'success' &&
-      contains(github.event.workflow_run.head_commit.message, 'frontend')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true' &&
+        github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render Deploy (Frontend)
+      - name: Deploy Frontend
         run: curl ${{ secrets.RENDER_FRONTEND_DEPLOY }}
