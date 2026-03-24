@@ -19,6 +19,11 @@ jobs:
           cd backend
           npm install
 
+      - name: Test Backend
+        run: |
+          cd backend
+          npm run test
+
       - name: Build Backend
         run: |
           cd backend
@@ -29,6 +34,11 @@ jobs:
         run: |
           cd frontend
           npm install
+
+      - name: Test Frontend
+        run: |
+          cd frontend
+          npm run test
 
       - name: Build Frontend
         run: |

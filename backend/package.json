@@ -6,7 +6,8 @@
     "start": "nest start --watch",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
-    "build": "nest build"
+    "build": "nest build",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
