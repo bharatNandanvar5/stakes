@@ -65,7 +65,7 @@ const AdminDashboard: React.FC = () => {
       <header className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-6">
           <Link
-            to="/"
+            to="/dashboard"
             className="glass p-3 rounded-xl hover:bg-white/10 transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
