@@ -3,14 +3,17 @@ import { useSocket } from "../context/SocketContext";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/useGameStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard, UserPlus, X, Check } from "lucide-react";
+import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard, UserPlus, X, Check, Grid3X3 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { GameType } from "../store/useGameStore";
 
 const InviteNotification: React.FC = () => {
   const { incomingInvite } = useGameStore();
   const { acceptInvite, rejectInvite } = useSocket();
 
   if (!incomingInvite) return null;
+
+  const isMines = incomingInvite.settings.gameType === GameType.MINES;
 
   return (
     <motion.div
@@ -21,7 +24,7 @@ const InviteNotification: React.FC = () => {
     >
       <div className="flex items-center gap-4 mb-4">
         <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-          <Bomb className="w-6 h-6 text-primary" />
+          {isMines ? <Bomb className="w-6 h-6 text-primary" /> : <Grid3X3 className="w-6 h-6 text-primary" />}
         </div>
         <div>
           <h4 className="text-sm font-black uppercase tracking-widest text-primary">NEW CHALLENGE!</h4>
@@ -29,8 +32,8 @@ const InviteNotification: React.FC = () => {
         </div>
       </div>
       <div className="bg-dark-lighter/50 p-3 rounded-xl mb-4 text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-between">
-        <span>{incomingInvite.settings.maxPlayers}P ARENA</span>
-        <span>{incomingInvite.settings.bombCount} BOMBS</span>
+        <span>{isMines ? "MINES" : "TIC-TAC-TOE"}</span>
+        <span>{isMines ? `${incomingInvite.settings.bombCount} BOMBS` : "STRICT 2P"}</span>
       </div>
       <div className="flex gap-2">
         <button 
@@ -58,6 +61,7 @@ const Lobby: React.FC = () => {
   const [roomCode, setRoomCode] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [bombCount, setBombCount] = useState(5);
+  const [gameType, setGameType] = useState<GameType>(GameType.MINES);
   const [showSettings, setShowSettings] = useState(false);
   
   const { createRoom, joinRoom, invitePlayer } = useSocket();
@@ -65,7 +69,7 @@ const Lobby: React.FC = () => {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      createRoom(name.trim(), { maxPlayers, bombCount });
+      createRoom(name.trim(), { maxPlayers, bombCount, gameType });
     }
   };
 
@@ -113,11 +117,15 @@ const Lobby: React.FC = () => {
             <div className="relative mb-4 animate-float">
               <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
               <div className="relative glass p-5 rounded-3xl border-primary/20">
-                <Bomb className="w-16 h-16 text-primary gem-glow" />
+                {gameType === GameType.MINES ? (
+                  <Bomb className="w-16 h-16 text-primary gem-glow" />
+                ) : (
+                  <Grid3X3 className="w-16 h-16 text-primary gem-glow" />
+                )}
               </div>
             </div>
             <h1 className="text-7xl font-black italic tracking-tighter uppercase text-white">
-              STAKE<span className="text-primary italic">MINES</span>
+              STAKE<span className="text-primary italic">{gameType === GameType.MINES ? "MINES" : "TITATO"}</span>
             </h1>
             <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] mt-2 uppercase">
               Provably Fair Multiplayer Arena
@@ -130,51 +138,75 @@ const Lobby: React.FC = () => {
               <div className="grid gap-4">
                 <div className="space-y-4">
                   <button
-                    onClick={() => setShowSettings(!showSettings)}
-                    className="w-full glass py-3 px-6 rounded-2xl flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Settings className={`w-4 h-4 ${showSettings ? 'animate-spin' : ''}`} />
-                      ARENA SETTINGS
-                    </div>
-                    <span className="text-[10px] bg-white/5 px-2 py-1 rounded">
-                      {maxPlayers}P | {bombCount} BOMBS
-                    </span>
-                  </button>
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="w-full glass py-3 px-6 rounded-2xl flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings className={`w-4 h-4 ${showSettings ? 'animate-spin' : ''}`} />
+                    ARENA SETTINGS
+                  </div>
+                  <span className="text-[10px] bg-white/5 px-2 py-1 rounded">
+                    {gameType === GameType.MINES ? 'MINES' : 'TIC-TAC-TOE'} | {gameType === GameType.MINES ? `${maxPlayers}P` : '2P'}
+                  </span>
+                </button>
 
-                  <AnimatePresence>
-                    {showSettings && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="space-y-4 glass p-4 rounded-2xl border-white/5 overflow-hidden"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
-                            <span>MAX PLAYERS</span>
-                            <span className="text-primary">{maxPlayers}</span>
-                          </div>
-                          <input 
-                            type="range" min="2" max="5" value={maxPlayers} 
-                            onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
-                            className="w-full accent-primary bg-dark-lighter rounded-lg h-2"
-                          />
+                <AnimatePresence>
+                  {showSettings && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-4 glass p-4 rounded-2xl border-white/5 overflow-hidden"
+                    >
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">SELECT GAME</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button 
+                            onClick={() => setGameType(GameType.MINES)}
+                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.MINES ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 text-gray-500 hover:border-white/10'}`}
+                          >
+                            <Bomb className="w-5 h-5" />
+                            <span className="text-[10px] font-black">MINES</span>
+                          </button>
+                          <button 
+                            onClick={() => setGameType(GameType.TIC_TAC_TOE)}
+                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.TIC_TAC_TOE ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 text-gray-500 hover:border-white/10'}`}
+                          >
+                            <Grid3X3 className="w-5 h-5" />
+                            <span className="text-[10px] font-black">TIC TAC TOE</span>
+                          </button>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
-                            <span>BOMB COUNT</span>
-                            <span className="text-accent-bomb">{bombCount}</span>
+                      </div>
+
+                      {gameType === GameType.MINES && (
+                        <>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                              <span>MAX PLAYERS</span>
+                              <span className="text-primary">{maxPlayers}</span>
+                            </div>
+                            <input 
+                              type="range" min="2" max="5" value={maxPlayers} 
+                              onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
+                              className="w-full accent-primary bg-dark-lighter rounded-lg h-2"
+                            />
                           </div>
-                          <input 
-                            type="range" min="1" max="20" value={bombCount} 
-                            onChange={(e) => setBombCount(parseInt(e.target.value))}
-                            className="w-full accent-accent-bomb bg-dark-lighter rounded-lg h-2"
-                          />
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                              <span>BOMB COUNT</span>
+                              <span className="text-accent-bomb">{bombCount}</span>
+                            </div>
+                            <input 
+                              type="range" min="1" max="20" value={bombCount} 
+                              onChange={(e) => setBombCount(parseInt(e.target.value))}
+                              className="w-full accent-accent-bomb bg-dark-lighter rounded-lg h-2"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 </div>
 
                 <button
@@ -245,7 +277,7 @@ const Lobby: React.FC = () => {
                     </div>
                   </div>
                   <button 
-                    onClick={() => invitePlayer(onlineUser.userId, { maxPlayers, bombCount })}
+                    onClick={() => invitePlayer(onlineUser.userId, { maxPlayers, bombCount, gameType })}
                     className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 group/btn"
                   >
                     <UserPlus className="w-4 h-4" />

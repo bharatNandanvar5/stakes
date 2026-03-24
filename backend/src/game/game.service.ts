@@ -1,12 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { GameState } from './game.types';
 
-
-export enum GameState {
-  FINISHED = 'finished',
-  PLAYING = 'playing',
-  ENDED = 'ended',
-  WAITING = 'waiting',
-}
 @Injectable()
 export class GameService {
   private readonly GRID_SIZE = 25; // 5x5
@@ -56,7 +50,7 @@ export class GameService {
       state.winnerId = state.players
         .filter(p => p.id !== playerId)
         .sort((a, b) => b.score - a.score)[0]?.id || playerId; // Fallback to current if no one else
-      return { isBomb: true, state };
+      return state;
     }
 
     // Gem found
@@ -77,24 +71,24 @@ export class GameService {
       state.winnerId = state.players.sort((a, b) => b.score - a.score)[0].id;
     }
 
-    return { isBomb: false, state };
+    return state;
   }
 
   getClientState(state: any, playerId: string) {
     // Only return revealed tiles' contents
-    const publicGrid = state.grid.map((val, idx) => {
+    const publicGrid = state.grid ? state.grid.map((val, idx) => {
       if (state.revealed[idx] || state.status === GameState.FINISHED) {
         return val;
       }
       return null; // Hidden
-    });
+    }) : new Array(this.GRID_SIZE).fill(null);
 
     return {
       roomId: state.roomId,
       players: state.players,
       turnPlayerId: state.turnPlayerId,
       grid: publicGrid,
-      revealed: state.revealed,
+      revealed: state.revealed || new Array(this.GRID_SIZE).fill(false),
       status: state.status,
       winnerId: state.winnerId,
       bombCount: state.bombCount,

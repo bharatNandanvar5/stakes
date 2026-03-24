@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, LogOut, Gem, Bomb, Star, Skull, User, ChevronRight } from 'lucide-react';
-import { useGameStore, GameStatus } from '../store/useGameStore';
+import { Trophy, RotateCcw, LogOut, Gem, Bomb, Star, Skull, User, Swords, Minus } from 'lucide-react';
+import { useGameStore, GameStatus, GameType } from '../store/useGameStore';
 import { useSocket } from '../context/SocketContext';
 
-const Particle: React.FC<{ type: 'win' | 'loss'; delay: number }> = ({ type, delay }) => {
-  const Icon = type === 'win' ? Star : Skull;
+const Particle: React.FC<{ type: 'win' | 'loss' | 'draw'; delay: number }> = ({ type, delay }) => {
+  const Icon = type === 'win' ? Star : type === 'loss' ? Skull : Minus;
   return (
     <motion.div
       initial={{ y: -20, opacity: 0, scale: 0 }}
@@ -22,7 +22,11 @@ const Particle: React.FC<{ type: 'win' | 'loss'; delay: number }> = ({ type, del
         repeat: Infinity,
         ease: "easeOut"
       }}
-      className={`absolute pointer-events-none ${type === 'win' ? 'text-primary/40' : 'text-accent-bomb/40'}`}
+      className={`absolute pointer-events-none ${
+        type === 'win' ? 'text-primary/40' : 
+        type === 'loss' ? 'text-accent-bomb/40' : 
+        'text-gray-500/40'
+      }`}
     >
       <Icon className="w-4 h-4" />
     </motion.div>
@@ -30,13 +34,16 @@ const Particle: React.FC<{ type: 'win' | 'loss'; delay: number }> = ({ type, del
 };
 
 const GameOverModal: React.FC = () => {
-  const { status, winnerId, players, playerId } = useGameStore();
+  const { status, winnerId, players, playerId, gameType } = useGameStore();
   const { restartGame, leaveRoom } = useSocket();
 
   if (status !== GameStatus.FINISHED) return null;
 
-  const winner = players.find((p) => p.id === winnerId);
+  const isDraw = winnerId === 'draw';
   const isWinner = winnerId === playerId;
+  const isLoss = !isWinner && !isDraw;
+  const isMines = gameType === GameType.MINES;
+
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
   return (
@@ -45,7 +52,7 @@ const GameOverModal: React.FC = () => {
         {/* Background Particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {Array.from({ length: 20 }).map((_, i) => (
-            <Particle key={i} type={isWinner ? 'win' : 'loss'} delay={i * 0.2} />
+            <Particle key={i} type={isWinner ? 'win' : isDraw ? 'draw' : 'loss'} delay={i * 0.2} />
           ))}
         </div>
 
@@ -54,15 +61,21 @@ const GameOverModal: React.FC = () => {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           className={`relative max-w-lg w-full glass rounded-[3rem] p-10 border-2 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] ${
-            isWinner ? 'border-primary/30 shadow-primary/10' : 'border-accent-bomb/30 shadow-accent-bomb/10'
+            isWinner ? 'border-primary/30 shadow-primary/10' : 
+            isDraw ? 'border-gray-500/30 shadow-gray-500/10' :
+            'border-accent-bomb/30 shadow-accent-bomb/10'
           }`}
         >
           {/* Decorative Background Elements */}
           <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${
-            isWinner ? 'from-transparent via-primary to-transparent' : 'from-transparent via-accent-bomb to-transparent'
+            isWinner ? 'from-transparent via-primary to-transparent' : 
+            isDraw ? 'from-transparent via-gray-500 to-transparent' :
+            'from-transparent via-accent-bomb to-transparent'
           }`} />
           <div className={`absolute -top-24 -right-24 w-64 h-64 blur-[100px] rounded-full ${
-            isWinner ? 'bg-primary/10' : 'bg-accent-bomb/10'
+            isWinner ? 'bg-primary/10' : 
+            isDraw ? 'bg-gray-500/10' :
+            'bg-accent-bomb/10'
           }`} />
 
           <div className="relative z-10 text-center">
@@ -72,31 +85,35 @@ const GameOverModal: React.FC = () => {
               animate={{ rotate: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
               className={`w-32 h-32 mx-auto mb-8 rounded-[2.5rem] flex items-center justify-center glass ${
-                isWinner ? 'border-primary/20 bg-primary/5 shadow-gem' : 'border-accent-bomb/20 bg-accent-bomb/5 shadow-bomb'
+                isWinner ? 'border-primary/20 bg-primary/5 shadow-gem' : 
+                isDraw ? 'border-gray-500/20 bg-gray-500/5' :
+                'border-accent-bomb/20 bg-accent-bomb/5 shadow-bomb'
               }`}
             >
               {isWinner ? (
                 <Trophy className="w-16 h-16 text-primary gem-glow" />
+              ) : isDraw ? (
+                <Swords className="w-16 h-16 text-gray-500" />
               ) : (
                 <Skull className="w-16 h-16 text-accent-bomb bomb-explosion" />
               )}
             </motion.div>
 
-            {/* Victory/Defeat Text */}
+            {/* Victory/Defeat/Draw Text */}
             <h2 className={`text-6xl font-black italic tracking-tighter uppercase mb-2 ${
-              isWinner ? 'text-primary' : 'text-accent-bomb'
+              isWinner ? 'text-primary' : isDraw ? 'text-gray-400' : 'text-accent-bomb'
             }`}>
-              {isWinner ? 'VICTORY' : 'DEFEAT'}
+              {isWinner ? 'VICTORY' : isDraw ? 'DRAW' : 'DEFEAT'}
             </h2>
             <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] uppercase mb-10">
-              {isWinner ? "Arena Dominance Achieved" : "Eliminated in the Arena"}
+              {isWinner ? "Arena Dominance Achieved" : isDraw ? "No winner this time" : "Eliminated in the Arena"}
             </p>
 
             {/* Scoreboard Summary */}
             <div className="space-y-3 mb-12">
               <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">
-                <span>FINAL RANKING</span>
-                <span>SCORE</span>
+                <span>{isMines ? 'FINAL RANKING' : 'PLAYER STATS'}</span>
+                <span>{isMines ? 'SCORE' : 'SETS'}</span>
               </div>
               {sortedPlayers.map((p, idx) => (
                 <div 
@@ -106,9 +123,11 @@ const GameOverModal: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <span className={`w-6 text-center font-black italic text-lg ${
-                      idx === 0 ? 'text-primary' : 'text-gray-500'
-                    }`}>#{idx + 1}</span>
+                    {isMines && (
+                      <span className={`w-6 text-center font-black italic text-lg ${
+                        idx === 0 ? 'text-primary' : 'text-gray-500'
+                      }`}>#{idx + 1}</span>
+                    )}
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                         p.id === winnerId ? 'bg-primary/20 text-primary' : 'bg-dark-lighter text-gray-500'
@@ -118,15 +137,24 @@ const GameOverModal: React.FC = () => {
                       <div className="text-left">
                         <div className="text-sm font-black uppercase tracking-wider">{p.name}</div>
                         <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
-                          WINS IN THIS RUN: <span className="text-primary">{p.matchWins}</span>
+                          {isMines ? 'WINS IN THIS RUN:' : 'CURRENT SETS:'} <span className="text-primary">{p.matchWins}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
                     <div className="text-xl font-black font-mono leading-none flex items-center gap-1.5">
-                      {p.id === winnerId ? <Gem className="w-4 h-4 text-primary" /> : <Bomb className="w-4 h-4 text-accent-bomb" />}
-                      {p.score.toLocaleString()}
+                      {isMines ? (
+                        <>
+                          {p.id === winnerId ? <Gem className="w-4 h-4 text-primary" /> : <Bomb className="w-4 h-4 text-accent-bomb" />}
+                          {p.score.toLocaleString()}
+                        </>
+                      ) : (
+                        <>
+                          <Trophy className={`w-4 h-4 ${p.id === winnerId ? 'text-primary' : 'text-gray-600'}`} />
+                          {p.matchWins}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

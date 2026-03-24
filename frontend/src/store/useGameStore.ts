@@ -14,16 +14,23 @@ export interface Player {
   matchWins: number;
 }
 
+export enum GameType {
+  MINES = 'mines',
+  TIC_TAC_TOE = 'tictactoe',
+}
+
 export interface GameState {
   roomId: string | null;
   players: Player[];
   turnPlayerId: string | null;
   grid: (number | null)[];
+  board: (string | null)[];
   revealed: boolean[];
   status: GameStatus;
+  gameType: GameType;
   bombCount: number;
   winnerId?: string;
-  playerId?: string | null;
+  playerId?: string;
   playerName?: string;
   onlineUsers: { userId: string; username: string; socketId: string }[];
   incomingInvite: { fromUser: any; settings: any } | null;
@@ -34,12 +41,14 @@ const initialState: GameState = {
   players: [],
   turnPlayerId: null,
   grid: new Array(25).fill(null),
+  board: new Array(9).fill(null),
   revealed: new Array(25).fill(false),
   status: GameStatus.WAITING,
+  gameType: GameType.MINES,
   bombCount: 0,
   winnerId: undefined,
-  playerId: null,
-  playerName: '',
+  playerId: undefined,
+  playerName: undefined,
   onlineUsers: [],
   incomingInvite: null,
 };
@@ -52,7 +61,6 @@ export const useGameStore = create<GameState & {
 }>((set) => ({
   ...initialState,
   setGameState: (state) => set((prev) => {
-    console.log('Zustand setting state:', state);
     return { ...prev, ...state };
   }),
   setOnlineUsers: (onlineUsers) => set({ onlineUsers }),

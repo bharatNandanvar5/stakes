@@ -1,25 +1,25 @@
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
-import { useGameStore } from "../store/useGameStore";
+import { useGameStore, GameType } from "../store/useGameStore";
 import { useAuthStore } from "../store/useAuthStore";
 
 interface SocketContextType {
   socket: Socket | null;
   createRoom: (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType },
   ) => void;
   joinRoom: (roomId: string, playerName: string) => void;
-  makeMove: (tileIndex: number) => void;
+  makeMove: (index: number) => void;
   restartGame: () => void;
   leaveRoom: () => void;
   invitePlayer: (
     toUserId: string,
-    settings: { maxPlayers: number; bombCount: number },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
   ) => void;
   acceptInvite: (
     fromSocketId: string,
-    settings: { maxPlayers: number; bombCount: number },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
   ) => void;
   rejectInvite: (fromSocketId: string) => void;
 }
@@ -97,7 +97,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createRoom = (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType },
   ) => {
     socketRef.current?.emit("create_room", { playerName, settings });
     setGameState({ playerName });
@@ -108,8 +108,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     setGameState({ playerName });
   };
 
-  const makeMove = (tileIndex: number) => {
-    socketRef.current?.emit("make_move", { tileIndex });
+  const makeMove = (index: number) => {
+    const { gameType } = useGameStore.getState();
+    if (gameType === GameType.TIC_TAC_TOE) {
+      socketRef.current?.emit("make_move", { index });
+    } else {
+      socketRef.current?.emit("make_move", { tileIndex: index });
+    }
   };
 
   const restartGame = () => {
@@ -123,14 +128,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const invitePlayer = (
     toUserId: string,
-    settings: { maxPlayers: number; bombCount: number },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
   ) => {
     socketRef.current?.emit("invite_player", { toUserId, settings });
   };
 
   const acceptInvite = (
     fromSocketId: string,
-    settings: { maxPlayers: number; bombCount: number },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
   ) => {
     socketRef.current?.emit("accept_invite", { fromSocketId, settings });
     setIncomingInvite(null);

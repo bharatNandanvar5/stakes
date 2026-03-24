@@ -16,6 +16,7 @@ export class GameHistory extends Document {
   settings: {
     maxPlayers: number;
     bombCount: number;
+    gameType?: string;
   };
 
   @Prop([{

@@ -1,44 +1,51 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { GameService, GameState } from '../game/game.service';
+import { GameService } from '../game/game.service';
+import { TicTacToeService } from '../game/tictactoe.service';
+import { GameType, GameState } from '../game/game.types';
 
 
 @Injectable()
 export class RoomService {
-  private rooms: Map<string, GameState> = new Map();
+  private rooms: Map<string, any> = new Map();
   private playerToRoom: Map<string, string> = new Map();
 
-  constructor(private readonly gameService: GameService) { }
+  constructor(
+    private readonly gameService: GameService,
+    private readonly tttService: TicTacToeService,
+  ) { }
 
-  createRoom(playerName: string, socketId: string, settings: { maxPlayers?: number; bombCount?: number } = {}): string {
+  createRoom(playerName: string, socketId: string, settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType } = {}): string {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const gameType = settings.gameType || GameType.MINES;
+    
     const player: any = {
       id: uuidv4(),
       name: playerName,
       socketId,
       score: 0,
-      matchWins: 0, // Wins in this specific room run
+      matchWins: 0,
     };
 
-    const gameState: any = {
+    const room: any = {
       roomId,
       players: [player],
       turnPlayerId: null,
-      grid: [],
-      revealed: [],
       status: GameState.WAITING,
+      gameType,
       settings: {
-        maxPlayers: Math.min(Math.max(settings.maxPlayers || 2, 2), 5),
+        maxPlayers: gameType === GameType.TIC_TAC_TOE ? 2 : Math.min(Math.max(settings.maxPlayers || 2, 2), 5),
         bombCount: Math.min(Math.max(settings.bombCount || 5, 1), 20),
       },
+      gameData: null, // Isolated game data
     };
 
-    this.rooms.set(roomId, gameState);
+    this.rooms.set(roomId, room);
     this.playerToRoom.set(socketId, roomId);
     return roomId;
   }
 
-  joinRoom(roomId: string, playerName: string, socketId: string): GameState {
+  joinRoom(roomId: string, playerName: string, socketId: string): any {
     const room: any = this.rooms.get(roomId);
     if (!room) {
       throw new Error('Room not found');
@@ -61,31 +68,37 @@ export class RoomService {
 
     // Auto-start if all players are present
     if (room.players.length === room.settings.maxPlayers) {
-      const initializedGame = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount);
-      initializedGame.settings = room.settings; // Keep settings
-      this.rooms.set(roomId, initializedGame);
-      return initializedGame;
+      if (room.gameType === GameType.TIC_TAC_TOE) {
+        room.gameData = this.tttService.initializeGame(roomId, room.players);
+      } else {
+        room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount);
+      }
+      room.status = GameState.PLAYING;
     }
 
     return room;
   }
 
-  restartGame(roomId: string): GameState {
+  restartGame(roomId: string): any {
     const room: any = this.rooms.get(roomId);
     if (!room || room.status !== GameState.FINISHED) {
       throw new Error('Cannot restart: room not found or game not finished');
     }
 
-    // Maintain matchWins!
-    const winners = room.players.filter(p => p.id === room.winnerId);
+    // Move scores to matchWins if they won
     room.players.forEach(p => {
-      if (p.id === room.winnerId) p.matchWins++;
+      if (p.id === room.gameData?.winnerId) p.matchWins++;
+      p.score = 0;
     });
 
-    const initializedGame = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount);
-    initializedGame.settings = room.settings;
-    this.rooms.set(roomId, initializedGame);
-    return initializedGame;
+    if (room.gameType === GameType.TIC_TAC_TOE) {
+      room.gameData = this.tttService.initializeGame(roomId, room.players);
+    } else {
+      room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount);
+    }
+
+    room.status = GameState.PLAYING;
+    return room;
   }
 
   private onlineUsers = new Map<string, { userId: string; username: string; socketId: string }>();

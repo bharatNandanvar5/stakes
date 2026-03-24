@@ -4,7 +4,7 @@ import { Trophy, User, ArrowRight, Users } from "lucide-react";
 import { motion } from "framer-motion";
 
 const PlayerCard: React.FC<{
-  player: Player;
+  player: Player & { symbol?: string };
   isTurn: boolean;
   isMe: boolean;
 }> = ({ player, isTurn, isMe }) => (
@@ -30,7 +30,11 @@ const PlayerCard: React.FC<{
           isTurn ? "bg-primary text-dark" : "bg-dark-card text-gray-500"
         }`}
       >
-        <User className="w-6 h-6" />
+        {player.symbol ? (
+          <span className="text-2xl font-black">{player.symbol}</span>
+        ) : (
+          <User className="w-6 h-6" />
+        )}
       </div>
       {isTurn && (
         <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -56,10 +60,12 @@ const PlayerCard: React.FC<{
           <Trophy className="w-4 h-4" />
           {player.score.toLocaleString()}
         </div>
-        <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
-          <span className="text-[9px] font-black text-gray-500">WINS:</span>
-          <span className="text-[10px] font-black text-primary">{player?.matchWins || 0}</span>
-        </div>
+        {player.matchWins !== undefined && (
+          <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
+            <span className="text-[9px] font-black text-gray-500">SETS:</span>
+            <span className="text-[10px] font-black text-primary">{player.matchWins}</span>
+          </div>
+        )}
       </div>
     </div>
 

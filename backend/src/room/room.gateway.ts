@@ -9,9 +9,11 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { RoomService } from './room.service';
-import { GameService, GameState } from '../game/game.service';
+import { GameService } from '../game/game.service';
+import { TicTacToeService } from '../game/tictactoe.service';
 import { HistoryService } from '../history/history.service';
 import { UsersService } from '../users/users.service';
+import { GameType, GameState } from '../game/game.types';
 
 @WebSocketGateway({
   cors: {
@@ -27,9 +29,30 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
+    private readonly tttService: TicTacToeService,
     private readonly historyService: HistoryService,
     private readonly usersService: UsersService,
   ) { }
+
+  private getClientState(room: any, socketId: string = '') {
+    let gameState: any;
+    const gameData = room.gameData || {};
+    
+    if (room.gameType === GameType.TIC_TAC_TOE) {
+      gameState = this.tttService.getClientState(gameData);
+    } else {
+      gameState = this.gameService.getClientState(gameData, socketId);
+    }
+
+    return {
+      ...gameState,
+      roomId: room.roomId,
+      players: room.players,
+      status: room.status,
+      gameType: room.gameType,
+      settings: room.settings,
+    };
+  }
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
@@ -44,7 +67,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (roomId) {
       const room = this.roomService.getRoom(roomId);
       if (room) {
-        this.server.to(roomId).emit('room_state', this.gameService.getClientState(room, ''));
+        this.server.to(roomId).emit('room_state', this.getClientState(room));
       }
     }
   }
@@ -65,7 +88,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('invite_player')
   handleInvitePlayer(
-    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number } },
+    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType } },
     @ConnectedSocket() client: Socket,
   ) {
     const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
@@ -81,28 +104,22 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('accept_invite')
   handleAcceptInvite(
-    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number } },
+    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType } },
     @ConnectedSocket() client: Socket,
   ) {
     const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === data.fromSocketId);
     const toUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
 
     if (fromUser && toUser) {
-      // Create a room and join both
       const roomId = this.roomService.createRoom(fromUser.username, fromUser.socketId, data.settings);
       this.roomService.joinRoom(roomId, toUser.username, toUser.socketId);
 
       const room: any = this.roomService.getRoom(roomId);
 
-      // Update players with their user IDs for history tracking
       const p1 = room.players.find(p => p.socketId === fromUser.socketId);
       const p2 = room.players.find(p => p.socketId === toUser.socketId);
       if (p1) p1.userId = fromUser.userId;
       if (p2) p2.userId = toUser.userId;
-
-      // Notify both players
-      // this.server.to(fromUser.socketId).join(roomId);
-      // this.server.to(toUser.socketId).join(roomId);
 
       const fromSocket = this.server.sockets.sockets.get(fromUser.socketId);
       const toSocket = this.server.sockets.sockets.get(toUser.socketId);
@@ -112,17 +129,17 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(fromUser.socketId).emit('room_created', {
         roomId,
-        gameState: this.gameService.getClientState(room, fromUser.socketId),
+        gameState: this.getClientState(room, fromUser.socketId),
         playerId: p1?.id
       });
 
       this.server.to(toUser.socketId).emit('room_joined', {
         roomId,
-        gameState: this.gameService.getClientState(room, toUser.socketId),
+        gameState: this.getClientState(room, toUser.socketId),
         playerId: p2?.id
       });
 
-      this.server.to(roomId).emit('game_started', { gameState: this.gameService.getClientState(room, '') });
+      this.server.to(roomId).emit('game_started', { gameState: this.getClientState(room) });
     }
   }
 
@@ -141,7 +158,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('create_room')
   handleCreateRoom(
-    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number } },
+    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType } },
     @ConnectedSocket() client: Socket,
   ) {
     console.log('handleCreateRoom:', data);
@@ -155,7 +172,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const response = {
         roomId,
-        gameState: this.gameService.getClientState(room, client.id),
+        gameState: this.getClientState(room, client.id),
         playerId: player?.id
       };
       console.log('Emitting room_created:', response);
@@ -179,17 +196,17 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const response = {
         roomId,
-        gameState: this.gameService.getClientState(gameState, ''),
+        gameState: this.getClientState(gameState, ''),
         playerId: player?.id
       };
       console.log('Emitting room_joined:', response);
       client.emit('room_joined', response);
 
       // Broadcast room update to all players
-      this.server.to(roomId).emit('player_joined', { roomId, gameState: this.gameService.getClientState(gameState, '') });
+      this.server.to(roomId).emit('player_joined', { roomId, gameState: this.getClientState(gameState) });
 
       if (gameState.status === GameState.PLAYING) {
-        this.server.to(roomId).emit('game_started', { gameState: this.gameService.getClientState(gameState, '') });
+        this.server.to(roomId).emit('game_started', { gameState: this.getClientState(gameState) });
       }
     } catch (error) {
       console.error('Join room error:', error.message);
@@ -199,59 +216,67 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('make_move')
   async handleMakeMove(
-    @MessageBody() { tileIndex }: { tileIndex: number },
+    @MessageBody() { tileIndex, index }: { tileIndex?: number, index?: number },
     @ConnectedSocket() client: Socket,
   ) {
     const room: any = this.roomService.getRoomBySocketId(client.id);
-    if (!room) return;
+    if (!room || !room.gameData) return;
 
     const currentPlayer = room.players.find(p => p.socketId === client.id);
     if (!currentPlayer) return;
 
     try {
-      const { isBomb, state } = this.gameService.makeMove(room, currentPlayer.id, tileIndex);
-      const gameState = this.gameService.getClientState(state, '');
+      if (room.gameType === GameType.TIC_TAC_TOE) {
+        this.tttService.makeMove(room.gameData, currentPlayer.id, index);
+      } else {
+        this.gameService.makeMove(room.gameData, currentPlayer.id, tileIndex);
+      }
+
+      // Sync room status with game status
+      room.status = room.gameData.status;
+
+      const gameState = this.getClientState(room, '');
 
       // Unified event for state changes
       this.server.to(room.roomId).emit('game_update', {
         tileIndex,
-        isBomb,
+        index,
         gameState,
-        event: state.status === GameState.FINISHED ? 'game_over' : 'tile_revealed'
+        event: room.status === GameState.FINISHED ? 'game_over' : 'move_made'
       });
 
-      if (state.status === GameState.FINISHED) {
-        await this.saveGameHistory(state);
+      if (room.status === GameState.FINISHED) {
+        await this.saveGameHistory(room);
       }
     } catch (error) {
       client.emit('error', { message: error.message });
     }
   }
 
-  private async saveGameHistory(state: any) {
-    const playersWithUserId = state.players.filter(p => p.userId);
+  private async saveGameHistory(room: any) {
+    const playersWithUserId = room.players.filter(p => p.userId);
     if (playersWithUserId.length === 0) return;
 
     const historyData = {
-      roomId: state.roomId,
+      roomId: room.roomId,
       players: playersWithUserId.map(p => p.userId),
-      winnerId: state.players.find(p => p.id === state.winnerId)?.userId,
-      settings: state.settings,
-      results: state.players.map(p => ({
+      winnerId: room.players.find(p => p.id === room.gameData?.winnerId)?.userId,
+      settings: room.settings,
+      results: room.players.map(p => ({
         userId: p.userId,
         score: p.score,
-        isWinner: p.id === state.winnerId
+        isWinner: p.id === room.gameData?.winnerId
       }))
     };
 
     await this.historyService.create(historyData);
 
     // Update user stats
-    for (const player of state.players) {
+    for (const player of room?.gameData?.players) {
       if (player.userId) {
         await this.usersService.updateStats(
           player.userId,
-          player.id === state.winnerId,
+          player.id === room?.gameData?.winnerId,
           player.score
         );
       }
@@ -264,9 +289,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!room) return;
 
     try {
-      const gameState = this.roomService.restartGame(room.roomId);
-      this.server.to(room.roomId).emit('game_started', {
-        gameState: this.gameService.getClientState(gameState, ''),
+      const newGameState = this.roomService.restartGame(room.roomId);
+      this.server.to(room.roomId).emit('game_started', { 
+        gameState: this.getClientState(newGameState) 
       });
     } catch (error) {
       client.emit('error', { message: error.message });
@@ -278,9 +303,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomId = this.roomService.removePlayer(client.id);
     if (roomId) {
       client.leave(roomId);
-      const room = this.roomService.getRoomBySocketId(roomId);
+      const room = this.roomService.getRoom(roomId);
       if (room) {
-        this.server.to(roomId).emit('room_state', this.gameService.getClientState(room, ''));
+        this.server.to(roomId).emit('room_state', this.getClientState(room));
       }
     }
   }
