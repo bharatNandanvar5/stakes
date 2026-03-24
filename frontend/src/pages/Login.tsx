@@ -44,7 +44,7 @@ const Login: React.FC = () => {
       >
         <div className="text-center mb-10">
           <h1 className="text-4xl font-black italic tracking-tighter uppercase mb-2">
-            WELCOME BACK
+            WELCOME BACK ':)'
           </h1>
           <p className="text-gray-500 font-bold tracking-widest text-xs uppercase">
             Enter your credentials to enter the arena
