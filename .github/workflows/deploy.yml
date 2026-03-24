@@ -1,10 +1,9 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: ["STAKE CI"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
 jobs:
   detect-changes:
@@ -28,8 +27,7 @@ jobs:
 
   deploy-backend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.backend_changed == 'true' &&
-        github.event.workflow_run.conclusion == 'success'
+    if: needs.detect-changes.outputs.backend_changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Backend
@@ -37,8 +35,7 @@ jobs:
 
   deploy-frontend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend_changed == 'true' &&
-        github.event.workflow_run.conclusion == 'success'
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Frontend
