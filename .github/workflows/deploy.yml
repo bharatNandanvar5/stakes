@@ -7,13 +7,20 @@ on:
       - completed
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  deploy-backend:
+    if: > 
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(github.event.workflow_run.head_commit.message, 'backend')
     runs-on: ubuntu-latest
-
     steps:
       - name: Trigger Render Deploy (Backend)
         run: curl ${{ secrets.RENDER_BACKEND_DEPLOY }}
 
+  deploy-frontend:
+    if: > 
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(github.event.workflow_run.head_commit.message, 'frontend')
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger Render Deploy (Frontend)
         run: curl ${{ secrets.RENDER_FRONTEND_DEPLOY }}
