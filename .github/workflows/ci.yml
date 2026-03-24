@@ -1,0 +1,30 @@
+name: STAKE CI
+on:
+  push:
+    runs-on: ubuntu-latest
+
+    stpes:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+        #Backend
+        name: Install Backend
+        run: |
+            cd backend
+            npm install
+
+        - name : Build Backend
+        run: |
+            cd backend
+            npm run build
+
+        #Frontend
+        name: Install Frontend
+        run: |
+            cd frontend
+            npm install
+        
+        - name : Build Frontend
+        run: |
+            cd frontend
+            npm run build

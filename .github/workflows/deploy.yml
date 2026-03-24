@@ -1,0 +1,14 @@
+name : Deploy
+
+on: 
+  workflow_run: 
+    workflows: ["STAKE CI"]
+    types:
+      - completed
+
+jobs: 
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: curl $({secrets.RENDER_DEPLOY_HOOK})
