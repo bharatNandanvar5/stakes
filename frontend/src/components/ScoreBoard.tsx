@@ -10,12 +10,14 @@ const PlayerCard: React.FC<{
 }> = ({ player, isTurn, isMe }) => (
   <div
     className={`p-5 rounded-2xl flex items-center gap-4 transition-all duration-500 relative overflow-hidden ${
-      isTurn
-        ? "glass border-primary/40 shadow-gem"
-        : "bg-dark-lighter/30 border border-white/5"
+      player.eliminated 
+        ? "bg-dark-card/20 border border-accent-bomb/20 opacity-60" 
+        : isTurn
+          ? "glass border-primary/40 shadow-gem"
+          : "bg-dark-lighter/30 border border-white/5"
     }`}
   >
-    {isTurn && (
+    {isTurn && !player.eliminated && (
       <motion.div
         layoutId="turn-indicator"
         className="absolute inset-0 bg-primary/5 pointer-events-none"
@@ -27,16 +29,20 @@ const PlayerCard: React.FC<{
     <div className="relative">
       <div
         className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300 ${
-          isTurn ? "bg-primary text-dark" : "bg-dark-card text-gray-500"
+          player.eliminated 
+            ? "bg-accent-bomb/10 text-accent-bomb border border-accent-bomb/20" 
+            : isTurn ? "bg-primary text-dark" : "bg-dark-card text-gray-500"
         }`}
       >
-        {player.symbol ? (
+        {player.eliminated ? (
+          <X className="w-6 h-6" />
+        ) : player.symbol ? (
           <span className="text-2xl font-black">{player.symbol}</span>
         ) : (
           <User className="w-6 h-6" />
         )}
       </div>
-      {isTurn && (
+      {isTurn && !player.eliminated && (
         <span className="absolute -top-1 -right-1 flex h-3 w-3">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
           <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
@@ -46,9 +52,16 @@ const PlayerCard: React.FC<{
 
     <div className="flex-1">
       <div className="flex items-center gap-2 mb-1">
-        <span className={`font-black uppercase tracking-wider text-sm ${isTurn ? 'text-white' : 'text-gray-400'}`}>
+        <span className={`font-black uppercase tracking-wider text-sm ${
+          player.eliminated ? 'text-accent-bomb line-through' : isTurn ? 'text-white' : 'text-gray-400'
+        }`}>
           {player.name}
         </span>
+        {player.eliminated && (
+          <span className="text-[8px] font-black bg-accent-bomb/20 text-accent-bomb px-1.5 py-0.5 rounded border border-accent-bomb/20">
+            ELIMINATED
+          </span>
+        )}
         {isMe && (
           <span className="text-[8px] font-black bg-primary/20 text-primary px-1.5 py-0.5 rounded border border-primary/20">
             YOU

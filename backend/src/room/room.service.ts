@@ -15,7 +15,7 @@ export class RoomService {
     private readonly tttService: TicTacToeService,
   ) { }
 
-  createRoom(playerName: string, socketId: string, settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType } = {}): string {
+  createRoom(playerName: string, socketId: string, settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean } = {}): string {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const gameType = settings.gameType || GameType.MINES;
     
@@ -25,6 +25,7 @@ export class RoomService {
       socketId,
       score: 0,
       matchWins: 0,
+      eliminated: false,
     };
 
     const room: any = {
@@ -36,6 +37,7 @@ export class RoomService {
       settings: {
         maxPlayers: gameType === GameType.TIC_TAC_TOE ? 2 : Math.min(Math.max(settings.maxPlayers || 2, 2), 5),
         bombCount: Math.min(Math.max(settings.bombCount || 5, 1), 20),
+        eliminationMode: settings.eliminationMode || false,
       },
       gameData: null, // Isolated game data
     };
@@ -61,6 +63,7 @@ export class RoomService {
       socketId,
       score: 0,
       matchWins: 0,
+      eliminated: false,
     };
 
     room.players.push(player);
@@ -71,7 +74,7 @@ export class RoomService {
       if (room.gameType === GameType.TIC_TAC_TOE) {
         room.gameData = this.tttService.initializeGame(roomId, room.players);
       } else {
-        room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount);
+        room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount, room.settings.eliminationMode);
       }
       room.status = GameState.PLAYING;
     }
@@ -91,12 +94,13 @@ export class RoomService {
     room.players.forEach(p => {
       if (winnerIds.includes(p.id)) p.matchWins++;
       p.score = 0;
+      p.eliminated = false;
     });
 
     if (room.gameType === GameType.TIC_TAC_TOE) {
       room.gameData = this.tttService.initializeGame(roomId, room.players);
     } else {
-      room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount);
+      room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount, room.settings.eliminationMode);
     }
 
     room.status = GameState.PLAYING;

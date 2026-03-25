@@ -12,6 +12,8 @@ export interface Player {
   socketId: string;
   score: number;
   matchWins: number;
+  eliminated?: boolean;
+  symbol?: string;
 }
 
 export enum GameType {
@@ -30,6 +32,7 @@ export interface GameState {
   gameType: GameType;
   bombCount: number;
   winnerIds: string[];
+  eliminationMode?: boolean;
   playerId?: string;
   playerName?: string;
   onlineUsers: { userId: string; username: string; socketId: string }[];

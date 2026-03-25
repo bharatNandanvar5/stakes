@@ -4,14 +4,16 @@ import { useGameStore, GameStatus } from '../store/useGameStore';
 import { useSocket } from '../context/SocketContext';
 
 const GameGrid: React.FC = () => {
-  const { grid, revealed, status, turnPlayerId, playerId } = useGameStore();
+  const { grid, revealed, status, turnPlayerId, playerId, players } = useGameStore();
   const { makeMove } = useSocket();
 
-  const isMyTurn = turnPlayerId === playerId;
+  const me = players.find(p => p.id === playerId);
+  const isEliminated = me?.eliminated;
+  const isMyTurn = turnPlayerId === playerId && !isEliminated;
   const isPlaying = status === GameStatus.PLAYING;
 
   const handleTileClick = (index: number) => {
-    if (isMyTurn && isPlaying && !revealed[index]) {
+    if (isMyTurn && isPlaying && !revealed[index] && !isEliminated) {
       makeMove(index);
     }
   };
@@ -41,7 +43,7 @@ const GameGrid: React.FC = () => {
       {!isMyTurn && isPlaying && (
         <div className="absolute -bottom-12 left-0 right-0 text-center animate-pulse">
           <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
-            Opponent is thinking...
+            {isEliminated ? "You are spectating..." : "Opponent is thinking..."}
           </span>
         </div>
       )}

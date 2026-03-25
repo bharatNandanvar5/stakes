@@ -8,13 +8,15 @@ import { Share2, Info, Users, Clock, Bomb, Swords } from "lucide-react";
 import { useSocket } from "../context/SocketContext";
 
 const GameRoom: React.FC = () => {
-  const { roomId, status, bombCount, turnPlayerId, playerId, gameType } =
+  const { roomId, status, bombCount, turnPlayerId, playerId, gameType, players } =
     useGameStore();
   const { leaveRoom } = useSocket();
 
   console.log("GameRoom State:", { roomId, status, turnPlayerId, playerId });
 
   const isMyTurn = turnPlayerId === playerId;
+  const me = players.find(p => p.id === playerId);
+  const isEliminated = me?.eliminated;
 
   const copyRoomId = () => {
     if (roomId) {
@@ -83,9 +85,15 @@ const GameRoom: React.FC = () => {
               <span className="font-black uppercase tracking-[0.15em] text-sm">
                 {status === GameStatus.WAITING
                   ? "Awaiting Opponent"
-                  : isMines ? "Battle in Progress" : "Duel in Progress"}
+                  : isEliminated ? "Spectating Arena" : isMines ? "Battle in Progress" : "Duel in Progress"}
               </span>
             </div>
+            {isEliminated && (
+              <div className="bg-accent-bomb/10 px-3 py-1 rounded-lg border border-accent-bomb/20 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-accent-bomb animate-pulse" />
+                <span className="text-[10px] font-black text-accent-bomb uppercase tracking-widest">Eliminated</span>
+              </div>
+            )}
             {isMines && (
               <div className="flex items-center gap-3 bg-dark-lighter/50 px-4 py-2 rounded-xl border border-white/5">
                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">

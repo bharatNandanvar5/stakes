@@ -5,7 +5,7 @@ import { GameState } from './game.types';
 export class GameService {
   private readonly GRID_SIZE = 25; // 5x5
 
-  initializeGame(roomId: string, players: any[], bombCount: number): any {
+  initializeGame(roomId: string, players: any[], bombCount: number, eliminationMode: boolean = false): any {
     const finalBombCount = Math.min(Math.max(bombCount || 1, 1), 20); // 1 to 20 bombs
     const grid = new Array(this.GRID_SIZE).fill(0);
     const bombIndices = new Set<number>();
@@ -28,12 +28,18 @@ export class GameService {
       status: GameState.PLAYING,
       bombCount: finalBombCount,
       winnerIds: [],
+      eliminationMode,
     };
   }
 
   makeMove(state: any, playerId: string, tileIndex: number) {
     if (state.status !== GameState.PLAYING || state.turnPlayerId !== playerId) {
       throw new Error('Invalid move: not your turn or game not playing');
+    }
+
+    const currentPlayer = state.players.find((p) => p.id === playerId);
+    if (currentPlayer.eliminated) {
+      throw new Error('You are eliminated and cannot make moves');
     }
 
     if (state.revealed[tileIndex]) {
@@ -44,27 +50,40 @@ export class GameService {
     const isBomb = state.grid[tileIndex] === 1;
 
     if (isBomb) {
-      state.status = GameState.FINISHED;
-      // All other players are winners
-      state.winnerIds = state.players
-        .filter(p => p.id !== playerId)
-        .map(p => p.id);
+      if (state.eliminationMode) {
+        currentPlayer.eliminated = true;
+        
+        const activePlayers = state.players.filter(p => !p.eliminated);
+        if (activePlayers.length <= 1) {
+          state.status = GameState.FINISHED;
+          state.winnerIds = activePlayers.map(p => p.id);
+          if (state.winnerIds.length === 0) {
+             // Everyone hit a bomb? Unlikely in turn based, but handle it.
+             state.winnerIds = [playerId]; 
+          }
+        } else {
+          // Game continues, switch turn to next active player
+          this.switchToNextActivePlayer(state, playerId);
+        }
+      } else {
+        state.status = GameState.FINISHED;
+        // All other players are winners
+        state.winnerIds = state.players
+          .filter(p => p.id !== playerId)
+          .map(p => p.id);
 
-      // If it was a 1-player game (though settings say min 2, just in case), the current player is the winner/loser
-      if (state.winnerIds.length === 0) {
-        state.winnerIds = [playerId]; // This would mean they lost, but for logic consistency
+        if (state.winnerIds.length === 0) {
+          state.winnerIds = [playerId];
+        }
       }
       return state;
     }
 
     // Gem found
-    const currentPlayer = state.players.find((p) => p.id === playerId);
     currentPlayer.score += 100;
 
-    // Switch turn to NEXT player in circle
-    const currentIndex = state.players.findIndex(p => p.id === playerId);
-    const nextIndex = (currentIndex + 1) % state.players.length;
-    state.turnPlayerId = state.players[nextIndex].id;
+    // Switch turn to NEXT active player
+    this.switchToNextActivePlayer(state, playerId);
 
     // Check if all gems are revealed
     const totalGems = this.GRID_SIZE - state.bombCount;
@@ -72,12 +91,24 @@ export class GameService {
 
     if (revealedGems === totalGems) {
       state.status = GameState.FINISHED;
-      // In this case, the one with highest score wins? 
-      // Or everyone wins? Let's say everyone wins if all gems found.
-      state.winnerIds = state.players.map(p => p.id);
+      state.winnerIds = state.players.filter(p => !p.eliminated).map(p => p.id);
     }
 
     return state;
+  }
+
+  private switchToNextActivePlayer(state: any, currentPlayerId: string) {
+    const currentIndex = state.players.findIndex(p => p.id === currentPlayerId);
+    let nextIndex = (currentIndex + 1) % state.players.length;
+    
+    // Find next player who is not eliminated
+    let attempts = 0;
+    while (state.players[nextIndex].eliminated && attempts < state.players.length) {
+      nextIndex = (nextIndex + 1) % state.players.length;
+      attempts++;
+    }
+    
+    state.turnPlayerId = state.players[nextIndex].id;
   }
 
   getClientState(state: any, playerId: string) {

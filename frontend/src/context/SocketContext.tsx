@@ -7,7 +7,7 @@ interface SocketContextType {
   socket: Socket | null;
   createRoom: (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean },
   ) => void;
   joinRoom: (roomId: string, playerName: string) => void;
   makeMove: (index: number) => void;
@@ -15,11 +15,11 @@ interface SocketContextType {
   leaveRoom: () => void;
   invitePlayer: (
     toUserId: string,
-    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean },
   ) => void;
   acceptInvite: (
     fromSocketId: string,
-    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean },
   ) => void;
   rejectInvite: (fromSocketId: string) => void;
 }
@@ -97,7 +97,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createRoom = (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean },
   ) => {
     socketRef.current?.emit("create_room", { playerName, settings });
     setGameState({ playerName });
@@ -128,14 +128,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const invitePlayer = (
     toUserId: string,
-    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean },
   ) => {
     socketRef.current?.emit("invite_player", { toUserId, settings });
   };
 
   const acceptInvite = (
     fromSocketId: string,
-    settings: { maxPlayers: number; bombCount: number; gameType: GameType },
+    settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean },
   ) => {
     socketRef.current?.emit("accept_invite", { fromSocketId, settings });
     setIncomingInvite(null);
