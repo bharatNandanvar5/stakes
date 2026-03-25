@@ -62,6 +62,7 @@ const Lobby: React.FC = () => {
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [bombCount, setBombCount] = useState(5);
   const [gameType, setGameType] = useState<GameType>(GameType.MINES);
+  const [eliminationMode, setEliminationMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
   const { createRoom, joinRoom, invitePlayer } = useSocket();
@@ -69,7 +70,7 @@ const Lobby: React.FC = () => {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      createRoom(name.trim(), { maxPlayers, bombCount, gameType });
+      createRoom(name.trim(), { maxPlayers, bombCount, gameType, eliminationMode });
     }
   };
 
@@ -202,6 +203,19 @@ const Lobby: React.FC = () => {
                               className="w-full accent-accent-bomb bg-dark-lighter rounded-lg h-2"
                             />
                           </div>
+
+                          <div className="flex items-center justify-between p-3 glass rounded-xl border-white/5 mt-2 group hover:bg-white/5 transition-colors cursor-pointer" onClick={() => setEliminationMode(!eliminationMode)}>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white">ELIMINATION MODE</span>
+                              <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Defeated players become spectators</span>
+                            </div>
+                            <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${eliminationMode ? 'bg-primary' : 'bg-dark-lighter'}`}>
+                              <motion.div 
+                                animate={{ x: eliminationMode ? 16 : 0 }}
+                                className="w-4 h-4 bg-white rounded-full shadow-sm"
+                              />
+                            </div>
+                          </div>
                         </>
                       )}
                     </motion.div>
@@ -277,7 +291,7 @@ const Lobby: React.FC = () => {
                     </div>
                   </div>
                   <button 
-                    onClick={() => invitePlayer(onlineUser.userId, { maxPlayers, bombCount, gameType })}
+                    onClick={() => invitePlayer(onlineUser.userId, { maxPlayers, bombCount, gameType, eliminationMode })}
                     className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 group/btn"
                   >
                     <UserPlus className="w-4 h-4" />

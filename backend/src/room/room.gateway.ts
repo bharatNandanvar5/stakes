@@ -88,7 +88,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('invite_player')
   handleInvitePlayer(
-    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType } },
+    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean } },
     @ConnectedSocket() client: Socket,
   ) {
     const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
@@ -104,7 +104,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('accept_invite')
   handleAcceptInvite(
-    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType } },
+    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean } },
     @ConnectedSocket() client: Socket,
   ) {
     const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === data.fromSocketId);
@@ -158,7 +158,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('create_room')
   handleCreateRoom(
-    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType } },
+    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType, eliminationMode?: boolean } },
     @ConnectedSocket() client: Socket,
   ) {
     console.log('handleCreateRoom:', data);
