@@ -21,6 +21,14 @@ export enum GameType {
   TIC_TAC_TOE = 'tictactoe',
 }
 
+export interface RoomSummary {
+  roomId: string;
+  gameType: GameType;
+  status: GameStatus;
+  playersCount: number;
+  maxPlayers: number;
+}
+
 export interface GameState {
   roomId: string | null;
   players: Player[];
@@ -37,6 +45,7 @@ export interface GameState {
   playerName?: string;
   onlineUsers: { userId: string; username: string; socketId: string }[];
   incomingInvite: { fromUser: any; settings: any } | null;
+  roomList: RoomSummary[];
 }
 
 const initialState: GameState = {
@@ -54,6 +63,7 @@ const initialState: GameState = {
   playerName: undefined,
   onlineUsers: [],
   incomingInvite: null,
+  roomList: [],
 };
 
 export const useGameStore = create<GameState & {
@@ -61,6 +71,7 @@ export const useGameStore = create<GameState & {
   resetGame: () => void;
   setOnlineUsers: (users: any[]) => void;
   setIncomingInvite: (invite: any) => void;
+  setRoomList: (rooms: RoomSummary[]) => void;
 }>((set) => ({
   ...initialState,
   setGameState: (state) => set((prev) => {
@@ -68,5 +79,6 @@ export const useGameStore = create<GameState & {
   }),
   setOnlineUsers: (onlineUsers) => set({ onlineUsers }),
   setIncomingInvite: (incomingInvite) => set({ incomingInvite }),
+  setRoomList: (roomList) => set({ roomList }),
   resetGame: () => set(initialState),
 }));

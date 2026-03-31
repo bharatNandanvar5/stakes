@@ -56,6 +56,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
+    client.emit('room_list', this.roomService.getPublicRooms());
   }
 
   handleDisconnect(client: Socket) {
@@ -70,6 +71,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(roomId).emit('room_state', this.getClientState(room));
       }
     }
+    this.server.emit('room_list', this.roomService.getPublicRooms());
   }
 
   @SubscribeMessage('authenticate')
@@ -111,7 +113,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const toUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
 
     if (fromUser && toUser) {
-      const roomId = this.roomService.createRoom(fromUser.username, fromUser.socketId, data.settings);
+      const roomId = this.roomService.createRoom(fromUser.username, fromUser.socketId, { ...data.settings, isPublic: false });
       this.roomService.joinRoom(roomId, toUser.username, toUser.socketId);
 
       const room: any = this.roomService.getRoom(roomId);
@@ -158,7 +160,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('create_room')
   handleCreateRoom(
-    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType, eliminationMode?: boolean } },
+    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType, eliminationMode?: boolean, isPublic?: boolean } },
     @ConnectedSocket() client: Socket,
   ) {
     console.log('handleCreateRoom:', data);
@@ -178,6 +180,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('Emitting room_created:', response);
       client.emit('room_created', response);
     }
+    this.server.emit('room_list', this.roomService.getPublicRooms());
   }
 
   @SubscribeMessage('join_room')
@@ -199,7 +202,6 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         gameState: this.getClientState(gameState, ''),
         playerId: player?.id
       };
-      console.log('Emitting room_joined:', response);
       client.emit('room_joined', response);
 
       // Broadcast room update to all players
@@ -208,6 +210,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (gameState.status === GameState.PLAYING) {
         this.server.to(roomId).emit('game_started', { gameState: this.getClientState(gameState) });
       }
+      this.server.emit('room_list', this.roomService.getPublicRooms());
     } catch (error) {
       console.error('Join room error:', error.message);
       client.emit('error', { message: error.message });
@@ -313,5 +316,6 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(roomId).emit('room_state', this.getClientState(room));
       }
     }
+    this.server.emit('room_list', this.roomService.getPublicRooms());
   }
 }

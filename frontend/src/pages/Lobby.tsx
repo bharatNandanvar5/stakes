@@ -56,13 +56,14 @@ const InviteNotification: React.FC = () => {
 const Lobby: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const { onlineUsers } = useGameStore();
+  const { onlineUsers, roomList } = useGameStore();
   const [name, setName] = useState(user?.username || "");
   const [roomCode, setRoomCode] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [bombCount, setBombCount] = useState(5);
   const [gameType, setGameType] = useState<GameType>(GameType.MINES);
   const [eliminationMode, setEliminationMode] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   
   const { createRoom, joinRoom, invitePlayer } = useSocket();
@@ -70,7 +71,7 @@ const Lobby: React.FC = () => {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      createRoom(name.trim(), { maxPlayers, bombCount, gameType, eliminationMode });
+      createRoom(name.trim(), { maxPlayers, bombCount, gameType, eliminationMode, isPublic });
     }
   };
 
@@ -218,6 +219,20 @@ const Lobby: React.FC = () => {
                           </div>
                         </>
                       )}
+                      <div className="flex items-center justify-between p-3 glass rounded-xl border-white/5 mt-2 group hover:bg-white/5 transition-colors cursor-pointer" onClick={() => setIsPublic(!isPublic)}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white">ROOM VISIBILITY</span>
+                          <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                            {isPublic ? "Visible on dashboard" : "Invite only"}
+                          </span>
+                        </div>
+                        <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isPublic ? 'bg-primary' : 'bg-dark-lighter'}`}>
+                          <motion.div 
+                            animate={{ x: isPublic ? 16 : 0 }}
+                            className="w-4 h-4 bg-white rounded-full shadow-sm"
+                          />
+                        </div>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -262,7 +277,7 @@ const Lobby: React.FC = () => {
           initial={{ x: 20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
-          className="h-[600px] flex flex-col"
+          className="h-[600px] flex flex-col gap-6"
         >
           <div className="glass rounded-[2.5rem] flex-1 flex flex-col overflow-hidden border-white/5">
             <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
@@ -302,6 +317,53 @@ const Lobby: React.FC = () => {
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-30">
                   <Users className="w-12 h-12 mb-4" />
                   <div className="text-[10px] font-black uppercase tracking-[0.2em]">WAITING FOR OTHERS TO CONNECT</div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="glass rounded-[2.5rem] flex-1 flex flex-col overflow-hidden border-white/5">
+            <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-widest text-white">PUBLIC ROOMS</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Join open battles</p>
+              </div>
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[10px] font-black text-primary">{roomList.length}</span>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {roomList.map((room) => {
+                const isFull = room.playersCount >= room.maxPlayers;
+                return (
+                  <div key={room.roomId} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between group hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-dark-lighter flex items-center justify-center font-black text-primary border border-white/5">
+                        {room.gameType === GameType.MINES ? "M" : "T"}
+                      </div>
+                      <div>
+                        <div className="text-sm font-black uppercase tracking-wider">{room.roomId}</div>
+                        <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                          <span>{room.playersCount}/{room.maxPlayers}</span>
+                          <span>•</span>
+                          <span>{room.gameType === GameType.MINES ? "MINES" : "TIC-TAC-TOE"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => joinRoom(room.roomId, name.trim())}
+                      disabled={isFull || !name.trim()}
+                      className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 disabled:opacity-30 disabled:hover:bg-primary/10"
+                    >
+                      <LogIn className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+              {roomList.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-30">
+                  <Grid3X3 className="w-12 h-12 mb-4" />
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">NO PUBLIC ROOMS YET</div>
                 </div>
               )}
             </div>
