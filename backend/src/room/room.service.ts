@@ -15,9 +15,14 @@ export class RoomService {
     private readonly tttService: TicTacToeService,
   ) { }
 
-  createRoom(playerName: string, socketId: string, settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean } = {}): string {
+  createRoom(
+    playerName: string,
+    socketId: string,
+    settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean } = {},
+  ): string {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const gameType = settings.gameType || GameType.MINES;
+    const isPublic = settings.isPublic ?? true;
     
     const player: any = {
       id: uuidv4(),
@@ -34,6 +39,7 @@ export class RoomService {
       turnPlayerId: null,
       status: GameState.WAITING,
       gameType,
+      isPublic,
       settings: {
         maxPlayers: gameType === GameType.TIC_TAC_TOE ? 2 : Math.min(Math.max(settings.maxPlayers || 2, 2), 5),
         bombCount: Math.min(Math.max(settings.bombCount || 5, 1), 20),
@@ -136,6 +142,18 @@ export class RoomService {
 
   getAllRooms(): any[] {
     return Array.from(this.rooms.values());
+  }
+
+  getPublicRooms(): any[] {
+    return Array.from(this.rooms.values())
+      .filter(room => room.isPublic)
+      .map(room => ({
+        roomId: room.roomId,
+        gameType: room.gameType,
+        status: room.status,
+        playersCount: room.players.length,
+        maxPlayers: room.settings.maxPlayers,
+      }));
   }
 
   removePlayer(socketId: string) {

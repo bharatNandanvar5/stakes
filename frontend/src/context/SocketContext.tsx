@@ -7,7 +7,7 @@ interface SocketContextType {
   socket: Socket | null;
   createRoom: (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean },
   ) => void;
   joinRoom: (roomId: string, playerName: string) => void;
   makeMove: (index: number) => void;
@@ -30,7 +30,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const socketRef = useRef<Socket | null>(null);
-  const { setGameState, setOnlineUsers, setIncomingInvite } = useGameStore();
+  const { setGameState, setOnlineUsers, setIncomingInvite, setRoomList } = useGameStore();
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
@@ -48,6 +48,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     socket.on("online_users", (users) => {
       setOnlineUsers(users);
+    });
+
+    socket.on("room_list", (rooms) => {
+      setRoomList(rooms);
     });
 
     socket.on("game_invite", (invite) => {
@@ -93,11 +97,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       socket.disconnect();
     };
-  }, [setGameState, setOnlineUsers, setIncomingInvite, user]);
+  }, [setGameState, setOnlineUsers, setIncomingInvite, setRoomList, user]);
 
   const createRoom = (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean },
   ) => {
     socketRef.current?.emit("create_room", { playerName, settings });
     setGameState({ playerName });
