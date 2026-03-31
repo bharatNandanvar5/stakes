@@ -4,6 +4,7 @@ export enum GameStatus {
   WAITING = 'waiting',
   PLAYING = 'playing',
   FINISHED = 'finished',
+  ROUND_ENDED = 'round_ended',
 }
 
 export interface Player {
@@ -14,11 +15,13 @@ export interface Player {
   matchWins: number;
   eliminated?: boolean;
   symbol?: string;
+  hasGuessed?: boolean;
 }
 
 export enum GameType {
   MINES = 'mines',
   TIC_TAC_TOE = 'tictactoe',
+  SCRIBBLE = 'scribble',
 }
 
 export interface RoomSummary {
@@ -46,6 +49,12 @@ export interface GameState {
   onlineUsers: { userId: string; username: string; socketId: string }[];
   incomingInvite: { fromUser: any; settings: any } | null;
   roomList: RoomSummary[];
+  secretWord?: string | null;
+  wordHint?: string;
+  chatHistory?: any[];
+  currentCycle?: number;
+  maxCycles?: number;
+  roundEndTime?: number;
 }
 
 const initialState: GameState = {
@@ -64,6 +73,12 @@ const initialState: GameState = {
   onlineUsers: [],
   incomingInvite: null,
   roomList: [],
+  secretWord: null,
+  wordHint: '',
+  chatHistory: [],
+  currentCycle: 1,
+  maxCycles: 1,
+  roundEndTime: 0,
 };
 
 export const useGameStore = create<GameState & {

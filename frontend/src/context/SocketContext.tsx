@@ -10,7 +10,7 @@ interface SocketContextType {
     settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean },
   ) => void;
   joinRoom: (roomId: string, playerName: string) => void;
-  makeMove: (index: number) => void;
+  makeMove: (index?: number, action?: any) => void;
   restartGame: () => void;
   leaveRoom: () => void;
   invitePlayer: (
@@ -112,9 +112,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     setGameState({ playerName });
   };
 
-  const makeMove = (index: number) => {
+  const makeMove = (index?: number, action?: any) => {
     const { gameType } = useGameStore.getState();
-    if (gameType === GameType.TIC_TAC_TOE) {
+    if (gameType === GameType.SCRIBBLE && action) {
+      socketRef.current?.emit("make_move", { action });
+    } else if (gameType === GameType.TIC_TAC_TOE) {
       socketRef.current?.emit("make_move", { index });
     } else {
       socketRef.current?.emit("make_move", { tileIndex: index });

@@ -1,6 +1,6 @@
 import React from "react";
 import { useGameStore, type Player } from "../store/useGameStore";
-import { Trophy, User, ArrowRight, Users } from "lucide-react";
+import { Trophy, User, ArrowRight, Users, X, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const PlayerCard: React.FC<{
@@ -94,17 +94,24 @@ const PlayerCard: React.FC<{
 );
 
 const ScoreBoard: React.FC = () => {
-  const { players, turnPlayerId, playerId } = useGameStore();
+  const { players, turnPlayerId, playerId, gameType } = useGameStore();
+  const isScribble = gameType === 'SCRIBBLE';
 
   return (
     <div className="flex flex-col gap-3 w-full">
       {players.map((player) => (
-        <PlayerCard
-          key={player.id}
-          player={player}
-          isTurn={turnPlayerId === player.id}
-          isMe={playerId === player.id}
-        />
+        <div key={player.id} className="relative group">
+          <PlayerCard
+            player={player}
+            isTurn={turnPlayerId === player.id}
+            isMe={playerId === player.id}
+          />
+          {isScribble && player.hasGuessed && player.id !== turnPlayerId && (
+            <div className="absolute top-2 right-2 bg-primary/20 text-primary p-1.5 rounded-lg border border-primary/20 backdrop-blur-sm shadow-lg animate-in fade-in zoom-in duration-300">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </div>
       ))}
       {players.length < 2 && (
         <div className="p-5 rounded-2xl border border-dashed border-white/10 flex flex-col items-center justify-center gap-2 opacity-50">

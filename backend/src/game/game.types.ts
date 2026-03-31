@@ -1,6 +1,7 @@
 export enum GameType {
   MINES = 'mines',
   TIC_TAC_TOE = 'tictactoe',
+  SCRIBBLE = 'scribble',
 }
 
 export enum GameState {
