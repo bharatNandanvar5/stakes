@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, BadRequestException } from '@nestjs/common';
 import { HistoryService } from '../history/history.service';
 import { UsersService } from '../users/users.service';
 import { RoomService } from '../room/room.service';
@@ -50,21 +50,57 @@ export class AdminController {
     return this.roomService.getAllRooms();
   }
 
+  // @Post('words/bulk')
+  // async bulkInsertWords(@Body() data: { words: string[] }) {
+  //   if (!data || !Array.isArray(data.words)) {
+  //     return { success: false, message: 'Invalid format. Provide { words: string[] }' };
+  //   }
+  //   const operations = data.words.map(w => ({
+  //     updateOne: {
+  //       filter: { word: w.toUpperCase() },
+  //       update: { $set: { word: w.toUpperCase() } },
+  //       upsert: true
+  //     }
+  //   }));
+  //   if (operations.length === 0) return { success: true, count: 0 };
+  //   const result = await this.wordModel.bulkWrite(operations);
+  //   return { success: true, count: result.upsertedCount + result.modifiedCount };
+  // }
+
   @Post('words/bulk')
-  async bulkInsertWords(@Body() data: { words: string[] }) {
+  async bulkInsertWords(@Body() data: { words: unknown[] }) {
     if (!data || !Array.isArray(data.words)) {
-      return { success: false, message: 'Invalid format. Provide { words: string[] }' };
+      throw new BadRequestException('Invalid format. Provide { words: string[] }');
     }
-    const operations = data.words.map(w => ({
+
+    // sanitize + validate
+    const validWords = data.words
+      .filter((w): w is string => typeof w === 'string')
+      .map(w => w.trim())
+      .filter(w => w.length > 0);
+
+    if (validWords.length !== data.words.length) {
+      throw new BadRequestException('All words must be non-empty strings');
+    }
+
+    if (validWords.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const operations = validWords.map(w => ({
       updateOne: {
         filter: { word: w.toUpperCase() },
         update: { $set: { word: w.toUpperCase() } },
         upsert: true
       }
     }));
-    if (operations.length === 0) return { success: true, count: 0 };
+
     const result = await this.wordModel.bulkWrite(operations);
-    return { success: true, count: result.upsertedCount + result.modifiedCount };
+
+    return {
+      success: true,
+      count: result.upsertedCount + result.modifiedCount
+    };
   }
 
   @Get('words')

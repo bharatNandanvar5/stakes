@@ -9,4 +9,6 @@ export enum GameState {
   PLAYING = 'playing',
   ENDED = 'ended',
   WAITING = 'waiting',
+  ROUND_ENDED = 'round_ended',
+  NEXT_ROUND = 'next_round',
 }

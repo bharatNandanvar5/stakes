@@ -43,7 +43,12 @@ export class RoomService {
       gameType,
       isPublic,
       settings: {
-        maxPlayers: gameType === GameType.TIC_TAC_TOE ? 2 : gameType === GameType.SCRIBBLE ? Math.max(settings.maxPlayers || 5, 3) : Math.min(Math.max(settings.maxPlayers || 3, 2), 10),
+        maxPlayers:
+          gameType === GameType.TIC_TAC_TOE
+            ? 2
+            : gameType === GameType.SCRIBBLE
+              ? Math.min(Math.max(settings.maxPlayers || 5, 3), 10)
+              : Math.min(Math.max(settings.maxPlayers || 3, 2), 10),
         bombCount: Math.min(Math.max(settings.bombCount || 5, 1), 20),
         eliminationMode: settings.eliminationMode || false,
         cycles: settings.cycles || 1,

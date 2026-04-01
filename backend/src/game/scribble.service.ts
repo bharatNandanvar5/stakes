@@ -48,7 +48,7 @@ export class ScribbleService {
   }
 
   makeMove(state: any, playerId: string, action: any) {
-    if (state.status !== GameState.PLAYING && action.type !== 'next_round') {
+    if (state.status !== GameState.PLAYING && action.type !== GameState.NEXT_ROUND) {
       throw new Error('Game is not playing');
     }
 
@@ -84,8 +84,8 @@ export class ScribbleService {
       return state;
     }
 
-    if (action.type === 'next_round') {
-      if (state.status === "round_ended") {
+    if (action.type === GameState.NEXT_ROUND) {
+      if (state.status === GameState.ROUND_ENDED) {
         this.startNextRound(state);
       }
       return state;
@@ -117,7 +117,7 @@ export class ScribbleService {
       if (drawer) drawer.score += drawerPoints;
     }
 
-    state.status = "round_ended";
+    state.status = GameState.ROUND_ENDED;
   }
 
   private startNextRound(state: any) {

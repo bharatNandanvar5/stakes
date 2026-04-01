@@ -29,25 +29,66 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private scribbleTimers: Map<string, NodeJS.Timeout> = new Map();
 
+  // private startScribbleTimer(roomId: string, durationMs: number) {
+  //   if (this.scribbleTimers.has(roomId)) {
+  //     clearTimeout(this.scribbleTimers.get(roomId));
+  //   }
+
+  //   const timer = setTimeout(async () => {
+  //     const room: any = this.roomService.getRoom(roomId);
+  //     if (room && room.gameType === GameType.SCRIBBLE && room.status === GameState.PLAYING) {
+  //       this.scribbleService.makeMove(room.gameData, '', { type: 'time_up' });
+  //       room.status = room.gameData.status;
+
+  //       const sockets = await this.server.in(roomId).fetchSockets();
+  //       for (const s of sockets) {
+  //         this.server.to(s.id).emit('game_update', {
+  //           action: { type: 'time_up' },
+  //           gameState: this.getClientState(room, s.id),
+  //           event: 'move_made'
+  //         });
+  //       }
+  //       this.scribbleTimers.delete(roomId);
+  //     }
+  //   }, durationMs);
+
+  //   this.scribbleTimers.set(roomId, timer);
+  // }
+
   private startScribbleTimer(roomId: string, durationMs: number) {
     if (this.scribbleTimers.has(roomId)) {
       clearTimeout(this.scribbleTimers.get(roomId));
     }
 
     const timer = setTimeout(async () => {
-      const room: any = this.roomService.getRoom(roomId);
-      if (room && room.gameType === GameType.SCRIBBLE && room.status === GameState.PLAYING) {
+      try {
+        const room: any = this.roomService.getRoom(roomId);
+
+        if (
+          !room ||
+          room.gameType !== GameType.SCRIBBLE ||
+          room.status !== GameState.PLAYING
+        ) {
+          return;
+        }
+
         this.scribbleService.makeMove(room.gameData, '', { type: 'time_up' });
         room.status = room.gameData.status;
 
         const sockets = await this.server.in(roomId).fetchSockets();
+
         for (const s of sockets) {
           this.server.to(s.id).emit('game_update', {
             action: { type: 'time_up' },
             gameState: this.getClientState(room, s.id),
-            event: 'move_made'
+            event: 'move_made',
           });
         }
+      } catch (err) {
+        // optional: log for observability
+        console.error(`Scribble timer failed for room ${roomId}`, err);
+      } finally {
+        // ✅ guaranteed cleanup
         this.scribbleTimers.delete(roomId);
       }
     }, durationMs);

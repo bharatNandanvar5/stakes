@@ -3,6 +3,10 @@ import { useGameStore, type Player } from "../store/useGameStore";
 import { Trophy, User, ArrowRight, Users, X, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+enum GameType {
+  TIC_TAC_TOE = "tic_tac_toe",
+  SCRIBBLE = "SCRIBBLE",
+}
 const PlayerCard: React.FC<{
   player: Player & { symbol?: string };
   isTurn: boolean;
@@ -10,8 +14,8 @@ const PlayerCard: React.FC<{
 }> = ({ player, isTurn, isMe }) => (
   <div
     className={`p-5 rounded-3xl flex items-center gap-4 transition-all duration-500 relative overflow-hidden ${
-      player.eliminated 
-        ? "bg-dark-card/20 border border-accent-bomb/20 opacity-60" 
+      player.eliminated
+        ? "bg-dark-card/20 border border-accent-bomb/20 opacity-60"
         : isTurn
           ? "bg-primary text-dark shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)] scale-[1.02]"
           : "bg-white/5 border border-white/5 hover:bg-white/10"
@@ -29,9 +33,11 @@ const PlayerCard: React.FC<{
     <div className="relative">
       <div
         className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-          player.eliminated 
-            ? "bg-accent-bomb/10 text-accent-bomb border border-accent-bomb/20" 
-            : isTurn ? "bg-white text-primary shadow-xl" : "bg-dark-card text-gray-500"
+          player.eliminated
+            ? "bg-accent-bomb/10 text-accent-bomb border border-accent-bomb/20"
+            : isTurn
+              ? "bg-white text-primary shadow-xl"
+              : "bg-dark-card text-gray-500"
         }`}
       >
         {player.eliminated ? (
@@ -52,9 +58,15 @@ const PlayerCard: React.FC<{
 
     <div className="flex-1">
       <div className="flex items-center gap-2 mb-1">
-        <span className={`font-black uppercase tracking-wider text-sm ${
-          player.eliminated ? 'text-accent-bomb line-through' : isTurn ? 'text-dark' : 'text-gray-300'
-        }`}>
+        <span
+          className={`font-black uppercase tracking-wider text-sm ${
+            player.eliminated
+              ? "text-accent-bomb line-through"
+              : isTurn
+                ? "text-dark"
+                : "text-gray-300"
+          }`}
+        >
           {player.name}
         </span>
         {player.eliminated && (
@@ -63,24 +75,40 @@ const PlayerCard: React.FC<{
           </span>
         )}
         {isMe && (
-          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${
-            isTurn ? 'bg-dark/20 text-dark border-dark/20' : 'bg-primary/20 text-primary border-primary/20'
-          }`}>
+          <span
+            className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${
+              isTurn
+                ? "bg-dark/20 text-dark border-dark/20"
+                : "bg-primary/20 text-primary border-primary/20"
+            }`}
+          >
             YOU
           </span>
         )}
       </div>
       <div className="flex items-center gap-3">
-        <div className={`flex items-center gap-1.5 font-mono font-black text-lg ${isTurn ? 'text-dark' : 'text-primary'}`}>
+        <div
+          className={`flex items-center gap-1.5 font-mono font-black text-lg ${isTurn ? "text-dark" : "text-primary"}`}
+        >
           <Trophy className="w-4 h-4" />
           {player.score.toLocaleString()}
         </div>
         {player.matchWins !== undefined && (
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border ${
-            isTurn ? 'bg-dark/10 border-dark/10' : 'bg-white/5 border-white/5'
-          }`}>
-            <span className={`text-[9px] font-black uppercase tracking-widest ${isTurn ? 'text-dark/60' : 'text-gray-500'}`}>SETS:</span>
-            <span className={`text-[10px] font-black ${isTurn ? 'text-dark' : 'text-primary'}`}>{player.matchWins}</span>
+          <div
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border ${
+              isTurn ? "bg-dark/10 border-dark/10" : "bg-white/5 border-white/5"
+            }`}
+          >
+            <span
+              className={`text-[9px] font-black uppercase tracking-widest ${isTurn ? "text-dark/60" : "text-gray-500"}`}
+            >
+              SETS:
+            </span>
+            <span
+              className={`text-[10px] font-black ${isTurn ? "text-dark" : "text-primary"}`}
+            >
+              {player.matchWins}
+            </span>
           </div>
         )}
       </div>
@@ -99,7 +127,7 @@ const PlayerCard: React.FC<{
 
 const ScoreBoard: React.FC = () => {
   const { players, turnPlayerId, playerId, gameType } = useGameStore();
-  const isScribble = gameType === 'SCRIBBLE';
+  const isScribble = gameType === GameType.SCRIBBLE;
 
   return (
     <div className="flex flex-col gap-3 w-full">
