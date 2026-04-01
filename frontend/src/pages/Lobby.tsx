@@ -3,7 +3,7 @@ import { useSocket } from "../context/SocketContext";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/useGameStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard, UserPlus, X, Check, Grid3X3, Palette } from "lucide-react";
+import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard, UserPlus, X, Check, Grid3X3, Palette, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 import { GameType } from "../store/useGameStore";
 
@@ -121,21 +121,21 @@ const Lobby: React.FC = () => {
             <div className="relative mb-4 animate-float">
               <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
               <div className="relative glass p-5 rounded-3xl border-primary/20">
-                {gameType === GameType.MINES ? (
-                  <Bomb className="w-16 h-16 text-primary gem-glow" />
-                ) : gameType === GameType.SCRIBBLE ? (
-                  <Palette className="w-16 h-16 text-primary gem-glow" />
-                ) : (
-                  <Grid3X3 className="w-16 h-16 text-primary gem-glow" />
-                )}
-              </div>
+              {gameType === GameType.MINES ? (
+                <Bomb className="w-16 h-16 text-primary gem-glow" />
+              ) : gameType === GameType.SCRIBBLE ? (
+                <Pencil className="w-16 h-16 text-primary gem-glow" />
+              ) : (
+                <Grid3X3 className="w-16 h-16 text-primary gem-glow" />
+              )}
             </div>
-            <h1 className="text-7xl font-black italic tracking-tighter uppercase text-white">
-              STAKE<span className="text-primary italic">{gameType === GameType.MINES ? "MINES" : gameType === GameType.SCRIBBLE ? "SCRIBBLE" : "TITATO"}</span>
-            </h1>
-            <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] mt-2 uppercase">
-              Provably Fair Multiplayer Arena
-            </p>
+          </div>
+          <h1 className="text-7xl font-black italic tracking-tighter uppercase text-white">
+            STAKE<span className="text-primary italic">{gameType === GameType.MINES ? "MINES" : gameType === GameType.SCRIBBLE ? "SCRIBBLE" : "TITATO"}</span>
+          </h1>
+          <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] mt-2 uppercase">
+            {gameType === GameType.SCRIBBLE ? "Multiplayer Drawing Arena" : "Provably Fair Multiplayer Arena"}
+          </p>
           </div>
 
           <div className="max-w-md mx-auto glass p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
@@ -322,23 +322,23 @@ const Lobby: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {onlineUsers.filter(u => u.userId !== user?.id).map((onlineUser) => (
-                <div key={onlineUser.userId} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-dark-lighter flex items-center justify-center font-black text-primary border border-white/5">
+                <div key={onlineUser.userId} className="bg-white/5 border border-white/5 p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-dark-card flex items-center justify-center font-black text-primary border border-white/5 shadow-lg group-hover:shadow-primary/20 transition-all">
                       {onlineUser.username[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-sm font-black uppercase tracking-wider">{onlineUser.username}</div>
-                      <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1">
-                        <div className="w-1 h-1 rounded-full bg-primary" /> READY
+                      <div className="text-sm font-black uppercase tracking-wider text-white">{onlineUser.username}</div>
+                      <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> READY
                       </div>
                     </div>
                   </div>
                   <button
                     onClick={() => invitePlayer(onlineUser.userId, { maxPlayers, bombCount, gameType, eliminationMode })}
-                    className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 group/btn"
+                    className="p-3.5 rounded-2xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 group/btn shadow-lg hover:shadow-primary/20"
                   >
-                    <UserPlus className="w-4 h-4" />
+                    <UserPlus className="w-5 h-5" />
                   </button>
                 </div>
               ))}
@@ -365,26 +365,26 @@ const Lobby: React.FC = () => {
               {roomList.map((room) => {
                 const isFull = room.playersCount >= room.maxPlayers;
                 return (
-                  <div key={room.roomId} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-dark-lighter flex items-center justify-center font-black text-primary border border-white/5">
+                  <div key={room.roomId} className="bg-white/5 border border-white/5 p-5 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-dark-card flex items-center justify-center font-black text-primary border border-white/5 shadow-lg group-hover:shadow-primary/20 transition-all">
                         {room.gameType === GameType.MINES ? "M" : room.gameType === GameType.SCRIBBLE ? "S" : "T"}
                       </div>
                       <div>
-                        <div className="text-sm font-black uppercase tracking-wider">{room.roomId}</div>
-                        <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                          <span>{room.playersCount}/{room.maxPlayers}</span>
-                          <span>•</span>
-                          <span>{room.gameType === GameType.MINES ? "MINES" : room.gameType === GameType.SCRIBBLE ? "SCRIBBLE" : "TIC-TAC-TOE"}</span>
+                        <div className="text-sm font-black uppercase tracking-wider text-white">{room.roomId}</div>
+                        <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {room.playersCount}/{room.maxPlayers}</span>
+                          <span className="opacity-20">•</span>
+                          <span className="text-primary">{room.gameType.toUpperCase()}</span>
                         </div>
                       </div>
                     </div>
                     <button
                       onClick={() => joinRoom(room.roomId, name.trim())}
                       disabled={isFull || !name.trim()}
-                      className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 disabled:opacity-30 disabled:hover:bg-primary/10"
+                      className="p-3.5 rounded-2xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 disabled:opacity-20 shadow-lg hover:shadow-primary/20"
                     >
-                      <LogIn className="w-4 h-4" />
+                      <LogIn className="w-5 h-5" />
                     </button>
                   </div>
                 );

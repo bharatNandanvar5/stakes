@@ -7,7 +7,7 @@ interface SocketContextType {
   socket: Socket | null;
   createRoom: (
     playerName: string,
-    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean },
+    settings?: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean, cycles?: number  },
   ) => void;
   joinRoom: (roomId: string, playerName: string) => void;
   makeMove: (index?: number, action?: any) => void;

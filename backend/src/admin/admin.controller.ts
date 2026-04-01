@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
 import { HistoryService } from '../history/history.service';
 import { UsersService } from '../users/users.service';
 import { RoomService } from '../room/room.service';
@@ -65,5 +65,34 @@ export class AdminController {
     if (operations.length === 0) return { success: true, count: 0 };
     const result = await this.wordModel.bulkWrite(operations);
     return { success: true, count: result.upsertedCount + result.modifiedCount };
+  }
+
+  @Get('words')
+  async getWords(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('search') search?: string,
+  ) {
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, Number(limit) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter: any = {};
+    if (search) {
+      filter.word = { $regex: search.trim(), $options: 'i' };
+    }
+
+    const [words, total] = await Promise.all([
+      this.wordModel.find(filter).skip(skip).limit(limitNum).lean(),
+      this.wordModel.countDocuments(filter),
+    ]);
+
+    return {
+      data: words,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    };
   }
 }

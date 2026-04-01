@@ -103,14 +103,16 @@ export class ScribbleService {
     const drawer = state.players.find(p => p.id === state.turnPlayerId);
 
     if (state.guessOrder.length === 0) {
-      drawer.score += 20;
+      if (drawer) drawer.score += 20;
     } else {
       let drawerPoints = 0;
       state.guessOrder.forEach((pId, idx) => {
         const guesser = state.players.find(p => p.id === pId);
         const pts = pointsConfig[idx] || 40;
-        if (guesser) guesser.score += pts;
-        drawerPoints += 50;
+        if (guesser) {
+          guesser.score += pts;
+          drawerPoints += 50;
+        }
       });
       if (drawer) drawer.score += drawerPoints;
     }
@@ -122,8 +124,12 @@ export class ScribbleService {
     if (state.drawerQueue.length === 0) {
       if (state.currentCycle >= state.maxCycles) {
         state.status = GameState.FINISHED;
-        const maxScore = Math.max(...state.players.map(p => p.score));
-        state.winnerIds = state.players.filter(p => p.score === maxScore).map(p => p.id);
+        const maxScore = Math.max(...state.players.map((p: any) => p.score));
+        if (maxScore > 0) {
+          state.winnerIds = state.players.filter((p: any) => p.score === maxScore).map((p: any) => p.id);
+        } else {
+          state.winnerIds = []; // No one wins if everyone has 0 score
+        }
         return;
       } else {
         state.currentCycle++;

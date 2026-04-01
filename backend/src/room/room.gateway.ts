@@ -219,7 +219,6 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         gameState: this.getClientState(room, client.id),
         playerId: player?.id
       };
-      console.log('Emitting room_created:', response);
       client.emit('room_created', response);
     }
     this.server.emit('room_list', this.roomService.getPublicRooms());
@@ -284,6 +283,14 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Sync room status with game status
       room.status = room.gameData.status;
+
+      // Sync player scores from gameData back to room.players
+      if (room.gameData.players) {
+        room.gameData.players.forEach((p: any) => {
+          const roomPlayer = room.players.find((rp: any) => rp.id === p.id);
+          if (roomPlayer) roomPlayer.score = p.score;
+        });
+      }
 
       // If round ended, clear timer
       if (room.gameType === GameType.SCRIBBLE && room.status === "round_ended") {
