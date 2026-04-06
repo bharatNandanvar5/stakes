@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { GameService } from '../game/game.service';
 import { TicTacToeService } from '../game/tictactoe.service';
+import { ScribbleService } from '../game/scribble.service';
 import { GameType, GameState } from '../game/game.types';
 
 
@@ -13,17 +14,18 @@ export class RoomService {
   constructor(
     private readonly gameService: GameService,
     private readonly tttService: TicTacToeService,
+    private readonly scribbleService: ScribbleService,
   ) { }
 
   createRoom(
     playerName: string,
     socketId: string,
-    settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean } = {},
+    settings: { maxPlayers?: number; bombCount?: number; gameType?: GameType; eliminationMode?: boolean; isPublic?: boolean; cycles?: number } = {},
   ): string {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const gameType = settings.gameType || GameType.MINES;
     const isPublic = settings.isPublic ?? true;
-    
+
     const player: any = {
       id: uuidv4(),
       name: playerName,
@@ -41,9 +43,15 @@ export class RoomService {
       gameType,
       isPublic,
       settings: {
-        maxPlayers: gameType === GameType.TIC_TAC_TOE ? 2 : Math.min(Math.max(settings.maxPlayers || 2, 2), 5),
+        maxPlayers:
+          gameType === GameType.TIC_TAC_TOE
+            ? 2
+            : gameType === GameType.SCRIBBLE
+              ? Math.min(Math.max(settings.maxPlayers || 5, 3), 10)
+              : Math.min(Math.max(settings.maxPlayers || 3, 2), 10),
         bombCount: Math.min(Math.max(settings.bombCount || 5, 1), 20),
         eliminationMode: settings.eliminationMode || false,
+        cycles: settings.cycles || 1,
       },
       gameData: null, // Isolated game data
     };
@@ -53,7 +61,7 @@ export class RoomService {
     return roomId;
   }
 
-  joinRoom(roomId: string, playerName: string, socketId: string): any {
+  async joinRoom(roomId: string, playerName: string, socketId: string): Promise<any> {
     const room: any = this.rooms.get(roomId);
     if (!room) {
       throw new Error('Room not found');
@@ -79,6 +87,8 @@ export class RoomService {
     if (room.players.length === room.settings.maxPlayers) {
       if (room.gameType === GameType.TIC_TAC_TOE) {
         room.gameData = this.tttService.initializeGame(roomId, room.players);
+      } else if (room.gameType === GameType.SCRIBBLE) {
+        room.gameData = await this.scribbleService.initializeGame(roomId, room.players, room.settings);
       } else {
         room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount, room.settings.eliminationMode);
       }
@@ -88,7 +98,7 @@ export class RoomService {
     return room;
   }
 
-  restartGame(roomId: string): any {
+  async restartGame(roomId: string): Promise<any> {
     const room: any = this.rooms.get(roomId);
     if (!room || room.status !== GameState.FINISHED) {
       throw new Error('Cannot restart: room not found or game not finished');
@@ -105,6 +115,8 @@ export class RoomService {
 
     if (room.gameType === GameType.TIC_TAC_TOE) {
       room.gameData = this.tttService.initializeGame(roomId, room.players);
+    } else if (room.gameType === GameType.SCRIBBLE) {
+      room.gameData = await this.scribbleService.initializeGame(roomId, room.players, room.settings);
     } else {
       room.gameData = this.gameService.initializeGame(roomId, room.players, room.settings.bombCount, room.settings.eliminationMode);
     }

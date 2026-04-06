@@ -3,7 +3,7 @@ import { useSocket } from "../context/SocketContext";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/useGameStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard, UserPlus, X, Check, Grid3X3 } from "lucide-react";
+import { Play, LogIn, Bomb, Users, LogOut, Settings, LayoutDashboard, UserPlus, X, Check, Grid3X3, Palette, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 import { GameType } from "../store/useGameStore";
 
@@ -24,7 +24,7 @@ const InviteNotification: React.FC = () => {
     >
       <div className="flex items-center gap-4 mb-4">
         <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-          {isMines ? <Bomb className="w-6 h-6 text-primary" /> : <Grid3X3 className="w-6 h-6 text-primary" />}
+          {isMines ? <Bomb className="w-6 h-6 text-primary" /> : incomingInvite.settings.gameType === GameType.SCRIBBLE ? <Palette className="w-6 h-6 text-primary" /> : <Grid3X3 className="w-6 h-6 text-primary" />}
         </div>
         <div>
           <h4 className="text-sm font-black uppercase tracking-widest text-primary">NEW CHALLENGE!</h4>
@@ -32,17 +32,17 @@ const InviteNotification: React.FC = () => {
         </div>
       </div>
       <div className="bg-dark-lighter/50 p-3 rounded-xl mb-4 text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-between">
-        <span>{isMines ? "MINES" : "TIC-TAC-TOE"}</span>
-        <span>{isMines ? `${incomingInvite.settings.bombCount} BOMBS` : "STRICT 2P"}</span>
+        <span>{isMines ? "MINES" : incomingInvite.settings.gameType === GameType.SCRIBBLE ? "SCRIBBLE" : "TIC-TAC-TOE"}</span>
+        <span>{isMines ? `${incomingInvite.settings.bombCount} BOMBS` : incomingInvite.settings.gameType === GameType.SCRIBBLE ? `${incomingInvite.settings.maxPlayers}P` : "STRICT 2P"}</span>
       </div>
       <div className="flex gap-2">
-        <button 
+        <button
           onClick={() => acceptInvite(incomingInvite.fromUser.socketId, incomingInvite.settings)}
           className="flex-1 bg-primary hover:bg-primary-hover text-dark font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2"
         >
           <Check className="w-4 h-4" /> ACCEPT
         </button>
-        <button 
+        <button
           onClick={() => rejectInvite(incomingInvite.fromUser.socketId)}
           className="bg-accent-bomb/10 hover:bg-accent-bomb/20 text-accent-bomb px-4 rounded-xl transition-all border border-accent-bomb/20 flex items-center justify-center"
         >
@@ -65,13 +65,15 @@ const Lobby: React.FC = () => {
   const [eliminationMode, setEliminationMode] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  
+
+  const [cycles, setCycles] = useState(1);
+
   const { createRoom, joinRoom, invitePlayer } = useSocket();
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      createRoom(name.trim(), { maxPlayers, bombCount, gameType, eliminationMode, isPublic });
+      createRoom(name.trim(), { maxPlayers, bombCount, gameType, eliminationMode, isPublic, cycles });
     }
   };
 
@@ -93,18 +95,30 @@ const Lobby: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <Users className="w-4 h-4 text-primary" />
             </div>
-            <span className="font-black text-sm uppercase tracking-widest">{user?.username}</span>
+            <span className="font-black text-sm uppercase tracking-widest">
+              {user?.username}
+            </span>
           </div>
-          {user?.role === 'admin' && (
-            <Link to="/admin" className="glass px-4 py-2 rounded-xl flex items-center gap-3 hover:bg-white/10 transition-colors">
+          {user?.role === "admin" && (
+            <Link
+              to="/admin"
+              className="glass px-4 py-2 rounded-xl flex items-center gap-3 hover:bg-white/10 transition-colors"
+            >
               <LayoutDashboard className="w-4 h-4 text-primary" />
-              <span className="font-black text-sm uppercase tracking-widest text-primary">ADMIN</span>
+              <span className="font-black text-sm uppercase tracking-widest text-primary">
+                ADMIN
+              </span>
             </Link>
           )}
         </div>
-        <button onClick={logout} className="glass px-4 py-2 rounded-xl flex items-center gap-3 hover:bg-accent-bomb/10 transition-colors group">
+        <button
+          onClick={logout}
+          className="glass px-4 py-2 rounded-xl flex items-center gap-3 hover:bg-accent-bomb/10 transition-colors group"
+        >
           <LogOut className="w-4 h-4 text-gray-500 group-hover:text-accent-bomb transition-colors" />
-          <span className="font-black text-sm uppercase tracking-widest text-gray-500 group-hover:text-accent-bomb">LOGOUT</span>
+          <span className="font-black text-sm uppercase tracking-widest text-gray-500 group-hover:text-accent-bomb">
+            LOGOUT
+          </span>
         </button>
       </div>
 
@@ -121,16 +135,27 @@ const Lobby: React.FC = () => {
               <div className="relative glass p-5 rounded-3xl border-primary/20">
                 {gameType === GameType.MINES ? (
                   <Bomb className="w-16 h-16 text-primary gem-glow" />
+                ) : gameType === GameType.SCRIBBLE ? (
+                  <Pencil className="w-16 h-16 text-primary gem-glow" />
                 ) : (
                   <Grid3X3 className="w-16 h-16 text-primary gem-glow" />
                 )}
               </div>
             </div>
             <h1 className="text-7xl font-black italic tracking-tighter uppercase text-white">
-              STAKE<span className="text-primary italic">{gameType === GameType.MINES ? "MINES" : "TITATO"}</span>
+              STAKE
+              <span className="text-primary italic">
+                {gameType === GameType.MINES
+                  ? "MINES"
+                  : gameType === GameType.SCRIBBLE
+                    ? "SCRIBBLE"
+                    : "TITATO"}
+              </span>
             </h1>
             <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] mt-2 uppercase">
-              Provably Fair Multiplayer Arena
+              {gameType === GameType.SCRIBBLE
+                ? "Multiplayer Drawing Arena"
+                : "Provably Fair Multiplayer Arena"}
             </p>
           </div>
 
@@ -140,102 +165,197 @@ const Lobby: React.FC = () => {
               <div className="grid gap-4">
                 <div className="space-y-4">
                   <button
-                  onClick={() => setShowSettings(!showSettings)}
-                  className="w-full glass py-3 px-6 rounded-2xl flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Settings className={`w-4 h-4 ${showSettings ? 'animate-spin' : ''}`} />
-                    ARENA SETTINGS
-                  </div>
-                  <span className="text-[10px] bg-white/5 px-2 py-1 rounded">
-                    {gameType === GameType.MINES ? 'MINES' : 'TIC-TAC-TOE'} | {gameType === GameType.MINES ? `${maxPlayers}P` : '2P'}
-                  </span>
-                </button>
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="w-full glass py-3 px-6 rounded-2xl flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings
+                        className={`w-4 h-4 ${showSettings ? "animate-spin" : ""}`}
+                      />
+                      ARENA SETTINGS
+                    </div>
+                    <span className="text-[10px] bg-white/5 px-2 py-1 rounded">
+                      {gameType === GameType.MINES
+                        ? "MINES"
+                        : gameType === GameType.SCRIBBLE
+                          ? "SCRIBBLE"
+                          : "TIC-TAC-TOE"}{" "}
+                      |{" "}
+                      {gameType === GameType.TIC_TAC_TOE
+                        ? "2P"
+                        : `${maxPlayers}P`}
+                    </span>
+                  </button>
 
-                <AnimatePresence>
-                  {showSettings && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="space-y-4 glass p-4 rounded-2xl border-white/5 overflow-hidden"
-                    >
-                      <div className="space-y-2">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">SELECT GAME</div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button 
-                            onClick={() => setGameType(GameType.MINES)}
-                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.MINES ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 text-gray-500 hover:border-white/10'}`}
-                          >
-                            <Bomb className="w-5 h-5" />
-                            <span className="text-[10px] font-black">MINES</span>
-                          </button>
-                          <button 
-                            onClick={() => setGameType(GameType.TIC_TAC_TOE)}
-                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.TIC_TAC_TOE ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 text-gray-500 hover:border-white/10'}`}
-                          >
-                            <Grid3X3 className="w-5 h-5" />
-                            <span className="text-[10px] font-black">TIC TAC TOE</span>
-                          </button>
+                  <AnimatePresence>
+                    {showSettings && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="space-y-4 glass p-4 rounded-2xl border-white/5 overflow-hidden"
+                      >
+                        <div className="space-y-2">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                            SELECT GAME
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              onClick={() => {
+                                setGameType(GameType.MINES);
+                                setMaxPlayers((prev) =>
+                                  Math.min(Math.max(prev || 2, 2), 5),
+                                );
+                              }}
+                              className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.MINES ? "border-primary bg-primary/10 text-primary" : "border-white/5 text-gray-500 hover:border-white/10"}`}
+                            >
+                              <Bomb className="w-5 h-5" />
+                              <span className="text-[10px] font-black">
+                                MINES
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setGameType(GameType.SCRIBBLE);
+                                setMaxPlayers(5);
+                              }}
+                              className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.SCRIBBLE ? "border-primary bg-primary/10 text-primary" : "border-white/5 text-gray-500 hover:border-white/10"}`}
+                            >
+                              <Palette className="w-5 h-5" />
+                              <span className="text-[10px] font-black">
+                                SCRIBBLE
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setGameType(GameType.TIC_TAC_TOE);
+                                setMaxPlayers(2);
+                              }}
+                              className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameType === GameType.TIC_TAC_TOE ? "border-primary bg-primary/10 text-primary" : "border-white/5 text-gray-500 hover:border-white/10"}`}
+                            >
+                              <Grid3X3 className="w-5 h-5" />
+                              <span className="text-[10px] font-black text-center leading-none">
+                                TIC TAC TOE
+                              </span>
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      {gameType === GameType.MINES && (
-                        <>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
-                              <span>MAX PLAYERS</span>
-                              <span className="text-primary">{maxPlayers}</span>
-                            </div>
-                            <input 
-                              type="range" min="2" max="5" value={maxPlayers} 
-                              onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
-                              className="w-full accent-primary bg-dark-lighter rounded-lg h-2"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
-                              <span>BOMB COUNT</span>
-                              <span className="text-accent-bomb">{bombCount}</span>
-                            </div>
-                            <input 
-                              type="range" min="1" max="20" value={bombCount} 
-                              onChange={(e) => setBombCount(parseInt(e.target.value))}
-                              className="w-full accent-accent-bomb bg-dark-lighter rounded-lg h-2"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between p-3 glass rounded-xl border-white/5 mt-2 group hover:bg-white/5 transition-colors cursor-pointer" onClick={() => setEliminationMode(!eliminationMode)}>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-white">ELIMINATION MODE</span>
-                              <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Defeated players become spectators</span>
-                            </div>
-                            <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${eliminationMode ? 'bg-primary' : 'bg-dark-lighter'}`}>
-                              <motion.div 
-                                animate={{ x: eliminationMode ? 16 : 0 }}
-                                className="w-4 h-4 bg-white rounded-full shadow-sm"
+                        {gameType !== GameType.TIC_TAC_TOE && (
+                          <>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                <span>MAX PLAYERS</span>
+                                <span className="text-primary">
+                                  {maxPlayers}
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={gameType === GameType.SCRIBBLE ? "3" : "2"}
+                                max={
+                                  gameType === GameType.SCRIBBLE ? "10" : "5"
+                                }
+                                value={maxPlayers}
+                                onChange={(e) =>
+                                  setMaxPlayers(parseInt(e.target.value))
+                                }
+                                className="w-full accent-primary bg-dark-lighter rounded-lg h-2"
                               />
                             </div>
+                            {gameType === GameType.SCRIBBLE && (
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                  <span>GAME CYCLES</span>
+                                  <span className="text-primary">{cycles}</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="5"
+                                  value={cycles}
+                                  onChange={(e) =>
+                                    setCycles(parseInt(e.target.value))
+                                  }
+                                  className="w-full accent-primary bg-dark-lighter rounded-lg h-2"
+                                />
+                                <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                                  Each cycle means everyone draws once
+                                </div>
+                              </div>
+                            )}
+                            {gameType === GameType.MINES && (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                    <span>BOMB COUNT</span>
+                                    <span className="text-accent-bomb">
+                                      {bombCount}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="20"
+                                    value={bombCount}
+                                    onChange={(e) =>
+                                      setBombCount(parseInt(e.target.value))
+                                    }
+                                    className="w-full accent-accent-bomb bg-dark-lighter rounded-lg h-2"
+                                  />
+                                </div>
+
+                                <div
+                                  className="flex items-center justify-between p-3 glass rounded-xl border-white/5 mt-2 group hover:bg-white/5 transition-colors cursor-pointer"
+                                  onClick={() =>
+                                    setEliminationMode(!eliminationMode)
+                                  }
+                                >
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                                      ELIMINATION MODE
+                                    </span>
+                                    <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                                      Defeated players become spectators
+                                    </span>
+                                  </div>
+                                  <div
+                                    className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${eliminationMode ? "bg-primary" : "bg-dark-lighter"}`}
+                                  >
+                                    <motion.div
+                                      animate={{ x: eliminationMode ? 16 : 0 }}
+                                      className="w-4 h-4 bg-white rounded-full shadow-sm"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
+                        <div
+                          className="flex items-center justify-between p-3 glass rounded-xl border-white/5 mt-2 group hover:bg-white/5 transition-colors cursor-pointer"
+                          onClick={() => setIsPublic(!isPublic)}
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                              ROOM VISIBILITY
+                            </span>
+                            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                              {isPublic ? "Public room" : "Invite only"}
+                            </span>
                           </div>
-                        </>
-                      )}
-                      <div className="flex items-center justify-between p-3 glass rounded-xl border-white/5 mt-2 group hover:bg-white/5 transition-colors cursor-pointer" onClick={() => setIsPublic(!isPublic)}>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-white">ROOM VISIBILITY</span>
-                          <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
-                            {isPublic ? "Visible on dashboard" : "Invite only"}
-                          </span>
+                          <div
+                            className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isPublic ? "bg-primary" : "bg-dark-lighter"}`}
+                          >
+                            <motion.div
+                              animate={{ x: isPublic ? 16 : 0 }}
+                              className="w-4 h-4 bg-white rounded-full shadow-sm"
+                            />
+                          </div>
                         </div>
-                        <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isPublic ? 'bg-primary' : 'bg-dark-lighter'}`}>
-                          <motion.div 
-                            animate={{ x: isPublic ? 16 : 0 }}
-                            className="w-4 h-4 bg-white rounded-full shadow-sm"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <button
@@ -248,7 +368,9 @@ const Lobby: React.FC = () => {
 
                 <div className="flex items-center gap-4 py-2">
                   <div className="h-[1px] flex-1 bg-white/5" />
-                  <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">OR JOIN PRIVATE</span>
+                  <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">
+                    OR JOIN PRIVATE
+                  </span>
                   <div className="h-[1px] flex-1 bg-white/5" />
                 </div>
 
@@ -282,41 +404,64 @@ const Lobby: React.FC = () => {
           <div className="glass rounded-[2.5rem] flex-1 flex flex-col overflow-hidden border-white/5">
             <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-black uppercase tracking-widest text-white">ONLINE PLAYERS</h3>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Challenge them now</p>
+                <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                  ONLINE PLAYERS
+                </h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  Challenge them now
+                </p>
               </div>
               <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-black text-primary">{onlineUsers.length}</span>
+                <span className="text-[10px] font-black text-primary">
+                  {onlineUsers.length}
+                </span>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-              {onlineUsers.filter(u => u.userId !== user?.id).map((onlineUser) => (
-                <div key={onlineUser.userId} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-dark-lighter flex items-center justify-center font-black text-primary border border-white/5">
-                      {onlineUser.username[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-sm font-black uppercase tracking-wider">{onlineUser.username}</div>
-                      <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1">
-                        <div className="w-1 h-1 rounded-full bg-primary" /> READY
+              {onlineUsers
+                .filter((u) => u.userId !== user?.id)
+                .map((onlineUser) => (
+                  <div
+                    key={onlineUser.userId}
+                    className="bg-white/5 border border-white/5 p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-dark-card flex items-center justify-center font-black text-primary border border-white/5 shadow-lg group-hover:shadow-primary/20 transition-all">
+                        {onlineUser.username[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm font-black uppercase tracking-wider text-white">
+                          {onlineUser.username}
+                        </div>
+                        <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mt-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />{" "}
+                          READY
+                        </div>
                       </div>
                     </div>
+                    <button
+                      onClick={() =>
+                        invitePlayer(onlineUser.userId, {
+                          maxPlayers,
+                          bombCount,
+                          gameType,
+                          eliminationMode,
+                        })
+                      }
+                      className="p-3.5 rounded-2xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 group/btn shadow-lg hover:shadow-primary/20"
+                    >
+                      <UserPlus className="w-5 h-5" />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => invitePlayer(onlineUser.userId, { maxPlayers, bombCount, gameType, eliminationMode })}
-                    className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 group/btn"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                ))}
               {onlineUsers.length <= 1 && (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-30">
                   <Users className="w-12 h-12 mb-4" />
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">WAITING FOR OTHERS TO CONNECT</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">
+                    WAITING FOR OTHERS TO CONNECT
+                  </div>
                 </div>
               )}
             </div>
@@ -324,38 +469,58 @@ const Lobby: React.FC = () => {
           <div className="glass rounded-[2.5rem] flex-1 flex flex-col overflow-hidden border-white/5">
             <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-black uppercase tracking-widest text-white">PUBLIC ROOMS</h3>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Join open battles</p>
+                <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                  PUBLIC ROOMS
+                </h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  Join open battles
+                </p>
               </div>
               <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-black text-primary">{roomList.length}</span>
+                <span className="text-[10px] font-black text-primary">
+                  {roomList.length}
+                </span>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {roomList.map((room) => {
                 const isFull = room.playersCount >= room.maxPlayers;
                 return (
-                  <div key={room.roomId} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-dark-lighter flex items-center justify-center font-black text-primary border border-white/5">
-                        {room.gameType === GameType.MINES ? "M" : "T"}
+                  <div
+                    key={room.roomId}
+                    className="bg-white/5 border border-white/5 p-5 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-dark-card flex items-center justify-center font-black text-primary border border-white/5 shadow-lg group-hover:shadow-primary/20 transition-all">
+                        {room.gameType === GameType.MINES
+                          ? "M"
+                          : room.gameType === GameType.SCRIBBLE
+                            ? "S"
+                            : "T"}
                       </div>
                       <div>
-                        <div className="text-sm font-black uppercase tracking-wider">{room.roomId}</div>
-                        <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                          <span>{room.playersCount}/{room.maxPlayers}</span>
-                          <span>•</span>
-                          <span>{room.gameType === GameType.MINES ? "MINES" : "TIC-TAC-TOE"}</span>
+                        <div className="text-sm font-black uppercase tracking-wider text-white">
+                          {room.roomId}
+                        </div>
+                        <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" /> {room.playersCount}/
+                            {room.maxPlayers}
+                          </span>
+                          <span className="opacity-20">•</span>
+                          <span className="text-primary">
+                            {room.gameType.toUpperCase()}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => joinRoom(room.roomId, name.trim())}
                       disabled={isFull || !name.trim()}
-                      className="p-3 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 disabled:opacity-30 disabled:hover:bg-primary/10"
+                      className="p-3.5 rounded-2xl bg-primary/10 hover:bg-primary text-primary hover:text-dark transition-all active:scale-95 disabled:opacity-20 shadow-lg hover:shadow-primary/20"
                     >
-                      <LogIn className="w-4 h-4" />
+                      <LogIn className="w-5 h-5" />
                     </button>
                   </div>
                 );
@@ -363,7 +528,9 @@ const Lobby: React.FC = () => {
               {roomList.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-30">
                   <Grid3X3 className="w-12 h-12 mb-4" />
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">NO PUBLIC ROOMS YET</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">
+                    NO PUBLIC ROOMS YET
+                  </div>
                 </div>
               )}
             </div>

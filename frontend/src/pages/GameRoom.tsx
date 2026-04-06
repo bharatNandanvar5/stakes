@@ -2,9 +2,10 @@ import React from "react";
 import { useGameStore, GameStatus, GameType } from "../store/useGameStore";
 import GameGrid from "../components/GameGrid";
 import TicTacToeGrid from "../components/TicTacToeGrid";
+import ScribbleBoard from "../components/ScribbleBoard";
 import ScoreBoard from "../components/ScoreBoard";
 import GameOverModal from "../components/GameOverModal";
-import { Share2, Info, Users, Clock, Bomb, Swords } from "lucide-react";
+import { Share2, Info, Users, Clock, Bomb, Swords, Palette } from "lucide-react";
 import { useSocket } from "../context/SocketContext";
 
 const GameRoom: React.FC = () => {
@@ -26,18 +27,19 @@ const GameRoom: React.FC = () => {
   };
 
   const isMines = gameType === GameType.MINES;
+  const isScribble = gameType === GameType.SCRIBBLE;
 
   return (
     <div className="min-h-screen bg-dark text-white p-4 md:p-8 flex flex-col items-center">
       <header className="w-full max-w-6xl flex items-center justify-between mb-12 glass p-4 rounded-2xl">
         <div className="flex items-center gap-4">
           <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
-            {isMines ? <Bomb className="w-6 h-6 text-primary" /> : <Swords className="w-6 h-6 text-primary" />}
+            {isMines ? <Bomb className="w-6 h-6 text-primary" /> : isScribble ? <Palette className="w-6 h-6 text-primary" /> : <Swords className="w-6 h-6 text-primary" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black italic uppercase tracking-tighter">
-                {isMines ? "STAKE MINES" : "STAKE TIC TAC TOE"}
+                {isMines ? "STAKE MINES" : isScribble ? "SCRIBBLE" : "STAKE TIC TAC TOE"}
               </h1>
               <span className="bg-primary/10 px-2 py-0.5 rounded text-[10px] font-bold text-primary uppercase border border-primary/20">
                 LIVE
@@ -85,7 +87,7 @@ const GameRoom: React.FC = () => {
               <span className="font-black uppercase tracking-[0.15em] text-sm">
                 {status === GameStatus.WAITING
                   ? "Awaiting Opponent"
-                  : isEliminated ? "Spectating Arena" : isMines ? "Battle in Progress" : "Duel in Progress"}
+                  : isEliminated ? "Spectating Arena" : isMines ? "Battle in Progress" : isScribble ? "Drawing in Progress" : "Duel in Progress"}
               </span>
             </div>
             {isEliminated && (
@@ -129,7 +131,7 @@ const GameRoom: React.FC = () => {
               </div>
             )}
             <div className="bg-dark-lighter/30 rounded-[2rem] p-4 md:p-8">
-              {isMines ? <GameGrid /> : <TicTacToeGrid />}
+              {isMines ? <GameGrid /> : isScribble ? <ScribbleBoard /> : <TicTacToeGrid />}
             </div>
           </div>
         </section>
@@ -139,7 +141,7 @@ const GameRoom: React.FC = () => {
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">
-                {isMines ? "BATTLE STATS" : "DUEL STATS"}
+                {isMines ? "BATTLE STATS" : isScribble ? "SCRIBBLE SCORE" : "DUEL STATS"}
               </h3>
               <div className="flex gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -164,6 +166,11 @@ const GameRoom: React.FC = () => {
                   hitting a <span className="text-accent-bomb font-bold">MINE</span>{" "}
                   ends the battle immediately. The player with the highest score
                   wins.
+                </>
+              ) : isScribble ? (
+                <>
+                  Take turns drawing the secret word while others guess. The faster you guess correctly, the more points you earn.
+                  The player with the highest score at the end of all cycles wins!
                 </>
               ) : (
                 <>

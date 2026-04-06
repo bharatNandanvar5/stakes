@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { RoomService } from './room.service';
 import { GameService } from '../game/game.service';
 import { TicTacToeService } from '../game/tictactoe.service';
+import { ScribbleService } from '../game/scribble.service';
 import { HistoryService } from '../history/history.service';
 import { UsersService } from '../users/users.service';
 import { GameType, GameState } from '../game/game.types';
@@ -26,20 +27,99 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
 
+  private scribbleTimers: Map<string, NodeJS.Timeout> = new Map();
+
+  // private startScribbleTimer(roomId: string, durationMs: number) {
+  //   if (this.scribbleTimers.has(roomId)) {
+  //     clearTimeout(this.scribbleTimers.get(roomId));
+  //   }
+
+  //   const timer = setTimeout(async () => {
+  //     const room: any = this.roomService.getRoom(roomId);
+  //     if (room && room.gameType === GameType.SCRIBBLE && room.status === GameState.PLAYING) {
+  //       this.scribbleService.makeMove(room.gameData, '', { type: 'time_up' });
+  //       room.status = room.gameData.status;
+
+  //       const sockets = await this.server.in(roomId).fetchSockets();
+  //       for (const s of sockets) {
+  //         this.server.to(s.id).emit('game_update', {
+  //           action: { type: 'time_up' },
+  //           gameState: this.getClientState(room, s.id),
+  //           event: 'move_made'
+  //         });
+  //       }
+  //       this.scribbleTimers.delete(roomId);
+  //     }
+  //   }, durationMs);
+
+  //   this.scribbleTimers.set(roomId, timer);
+  // }
+
+  private startScribbleTimer(roomId: string, durationMs: number) {
+    if (this.scribbleTimers.has(roomId)) {
+      clearTimeout(this.scribbleTimers.get(roomId));
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const room: any = this.roomService.getRoom(roomId);
+
+        if (
+          !room ||
+          room.gameType !== GameType.SCRIBBLE ||
+          room.status !== GameState.PLAYING
+        ) {
+          return;
+        }
+
+        this.scribbleService.makeMove(room.gameData, '', { type: 'time_up' });
+        room.status = room.gameData.status;
+
+        const sockets = await this.server.in(roomId).fetchSockets();
+
+        for (const s of sockets) {
+          this.server.to(s.id).emit('game_update', {
+            action: { type: 'time_up' },
+            gameState: this.getClientState(room, s.id),
+            event: 'move_made',
+          });
+        }
+      } catch (err) {
+        // optional: log for observability
+        console.error(`Scribble timer failed for room ${roomId}`, err);
+      } finally {
+        // ✅ guaranteed cleanup
+        this.scribbleTimers.delete(roomId);
+      }
+    }, durationMs);
+
+    this.scribbleTimers.set(roomId, timer);
+  }
+
+  private clearScribbleTimer(roomId: string) {
+    if (this.scribbleTimers.has(roomId)) {
+      clearTimeout(this.scribbleTimers.get(roomId));
+      this.scribbleTimers.delete(roomId);
+    }
+  }
+
   constructor(
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
     private readonly tttService: TicTacToeService,
+    private readonly scribbleService: ScribbleService,
     private readonly historyService: HistoryService,
     private readonly usersService: UsersService,
   ) { }
 
   private getClientState(room: any, socketId: string = '') {
     let gameState: any;
-    const gameData = room.gameData || {};
+    const gameData = room.gameData || room;
 
     if (room.gameType === GameType.TIC_TAC_TOE) {
       gameState = this.tttService.getClientState(gameData);
+    } else if (room.gameType === GameType.SCRIBBLE) {
+      gameState = this.scribbleService.getClientState(gameData, socketId);
     } else {
       gameState = this.gameService.getClientState(gameData, socketId);
     }
@@ -48,7 +128,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ...gameState,
       roomId: room.roomId,
       players: room.players,
-      status: room.status,
+      status: room.status, // wait, room.status vs room.gameData.status... let GameState override
       gameType: room.gameType,
       settings: room.settings,
     };
@@ -90,7 +170,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('invite_player')
   handleInvitePlayer(
-    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean } },
+    @MessageBody() data: { toUserId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean; cycles?: number } },
     @ConnectedSocket() client: Socket,
   ) {
     const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === client.id);
@@ -106,7 +186,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('accept_invite')
   handleAcceptInvite(
-    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean } },
+    @MessageBody() data: { fromSocketId: string; settings: { maxPlayers: number; bombCount: number; gameType: GameType; eliminationMode: boolean; cycles?: number } },
     @ConnectedSocket() client: Socket,
   ) {
     const fromUser = this.roomService.getOnlineUsers().find(u => u.socketId === data.fromSocketId);
@@ -142,6 +222,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.server.to(roomId).emit('game_started', { gameState: this.getClientState(room) });
+      if (room.gameType === GameType.SCRIBBLE) {
+        this.startScribbleTimer(roomId, 80000);
+      }
     }
   }
 
@@ -160,7 +243,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('create_room')
   handleCreateRoom(
-    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType, eliminationMode?: boolean, isPublic?: boolean } },
+    @MessageBody() data: { playerName: string, settings?: { maxPlayers?: number, bombCount?: number, gameType?: GameType, eliminationMode?: boolean, isPublic?: boolean, cycles?: number } },
     @ConnectedSocket() client: Socket,
   ) {
     console.log('handleCreateRoom:', data);
@@ -177,21 +260,20 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         gameState: this.getClientState(room, client.id),
         playerId: player?.id
       };
-      console.log('Emitting room_created:', response);
       client.emit('room_created', response);
     }
     this.server.emit('room_list', this.roomService.getPublicRooms());
   }
 
   @SubscribeMessage('join_room')
-  handleJoinRoom(
+  async handleJoinRoom(
     @MessageBody() data: { roomId: string; playerName: string },
     @ConnectedSocket() client: Socket,
   ) {
     try {
       console.log('handleJoinRoom:', data);
       const roomId = data.roomId.toUpperCase();
-      const gameState: any = this.roomService.joinRoom(roomId, data.playerName, client.id);
+      const gameState: any = await this.roomService.joinRoom(roomId, data.playerName, client.id);
       client.join(roomId);
 
       const player = gameState.players.find(p => p.socketId === client.id);
@@ -199,7 +281,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const response = {
         roomId,
-        gameState: this.getClientState(gameState, ''),
+        gameState: this.getClientState(gameState, client.id),
         playerId: player?.id
       };
       client.emit('room_joined', response);
@@ -209,6 +291,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (gameState.status === GameState.PLAYING) {
         this.server.to(roomId).emit('game_started', { gameState: this.getClientState(gameState) });
+        if (gameState.gameType === GameType.SCRIBBLE) {
+          this.startScribbleTimer(roomId, 80000);
+        }
       }
       this.server.emit('room_list', this.roomService.getPublicRooms());
     } catch (error) {
@@ -219,7 +304,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('make_move')
   async handleMakeMove(
-    @MessageBody() { tileIndex, index }: { tileIndex?: number, index?: number },
+    @MessageBody() { tileIndex, index, action }: { tileIndex?: number, index?: number, action?: any },
     @ConnectedSocket() client: Socket,
   ) {
     const room: any = this.roomService.getRoomBySocketId(client.id);
@@ -231,6 +316,8 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       if (room.gameType === GameType.TIC_TAC_TOE) {
         this.tttService.makeMove(room.gameData, currentPlayer.id, index);
+      } else if (room.gameType === GameType.SCRIBBLE) {
+        this.scribbleService.makeMove(room.gameData, currentPlayer.id, action);
       } else {
         this.gameService.makeMove(room.gameData, currentPlayer.id, tileIndex);
       }
@@ -238,15 +325,45 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Sync room status with game status
       room.status = room.gameData.status;
 
-      const gameState = this.getClientState(room, '');
+      // Sync player scores from gameData back to room.players
+      if (room.gameData.players) {
+        room.gameData.players.forEach((p: any) => {
+          const roomPlayer = room.players.find((rp: any) => rp.id === p.id);
+          if (roomPlayer) roomPlayer.score = p.score;
+        });
+      }
 
-      // Unified event for state changes
-      this.server.to(room.roomId).emit('game_update', {
-        tileIndex,
-        index,
-        gameState,
-        event: room.status === GameState.FINISHED ? 'game_over' : 'move_made'
-      });
+      // If round ended, clear timer
+      if (room.gameType === GameType.SCRIBBLE && room.status === "round_ended") {
+        this.clearScribbleTimer(room.roomId);
+      }
+
+      // If starting next round, start new timer
+      if (room.gameType === GameType.SCRIBBLE && action?.type === 'next_round' && room.status === GameState.PLAYING) {
+        this.startScribbleTimer(room.roomId, 80000);
+      }
+
+      // Notice for scribble, state changes based on who is viewing it
+      if (room.gameType === GameType.SCRIBBLE) {
+        // for scribble emit specifically to each one so secret word is hidden
+        const sockets = await this.server.in(room.roomId).fetchSockets();
+        for (const s of sockets) {
+          this.server.to(s.id).emit('game_update', {
+            action,
+            gameState: this.getClientState(room, s.id),
+            event: room.status === GameState.FINISHED ? 'game_over' : 'move_made'
+          });
+        }
+      } else {
+        const gameState = this.getClientState(room, '');
+        // Unified event for state changes
+        this.server.to(room.roomId).emit('game_update', {
+          tileIndex,
+          index,
+          gameState,
+          event: room.status === GameState.FINISHED ? 'game_over' : 'move_made'
+        });
+      }
 
       if (room.status === GameState.FINISHED) {
         await this.saveGameHistory(room);
@@ -254,6 +371,25 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       client.emit('error', { message: error.message });
     }
+  }
+
+  @SubscribeMessage('scribble_draw')
+  handleScribbleDraw(
+    @MessageBody() data: any,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const room: any = this.roomService.getRoomBySocketId(client.id);
+    if (!room || room.gameType !== GameType.SCRIBBLE || room.status !== GameState.PLAYING) return;
+
+    // Validate drawer
+    const currentPlayer = room.players.find(p => p.socketId === client.id);
+    if (!currentPlayer || currentPlayer.id !== room.gameData.turnPlayerId) return;
+
+    // Optional: store history for newly joined players
+    // room.gameData.drawHistory.push(data);
+
+    // Broadcast to others
+    client.to(room.roomId).emit('scribble_draw', data);
   }
 
   private async saveGameHistory(room: any) {
@@ -292,12 +428,15 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('restart_game')
-  handleRestartGame(@ConnectedSocket() client: Socket) {
+  async handleRestartGame(@ConnectedSocket() client: Socket) {
     const room: any = this.roomService.getRoomBySocketId(client.id);
     if (!room) return;
 
     try {
-      const newGameState = this.roomService.restartGame(room.roomId);
+      const newGameState = await this.roomService.restartGame(room.roomId);
+      if (newGameState.gameType === GameType.SCRIBBLE) {
+        this.startScribbleTimer(room.roomId, 80000);
+      }
       this.server.to(room.roomId).emit('game_started', {
         gameState: this.getClientState(newGameState)
       });
